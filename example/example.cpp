@@ -2,6 +2,6 @@ import HyCAN;
 
 int main()
 {
-    init();
+    HyCAN::init();
     return 0;
 }
