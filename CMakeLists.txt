@@ -9,6 +9,7 @@ target_include_directories(HyCAN PRIVATE src)
 target_sources(HyCAN PUBLIC
         FILE_SET CXX_MODULES
         FILES src/HyCAN.cxx
+        src/Interface.cxx
 )
 add_executable(HyCAN_Example example/example.cpp)
 
