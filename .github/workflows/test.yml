@@ -21,6 +21,10 @@ jobs:
           generator: Ninja
           cxx-compiler: clang++
           c-compiler: clang
+          options: |
+            CMAKE_CXX_FLAGS="-stdlib=libc++"
+            CMAKE_EXE_LINKER_FLAGS="-stdlib=libc++"
+            CMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++"
 
       - name: Test Project
         run: |
