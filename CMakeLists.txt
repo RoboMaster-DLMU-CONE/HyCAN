@@ -4,8 +4,8 @@ project(HyCAN)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(CMAKE_CXX_STANDARD 26)
-option(BUILD_HYCAN_EXAMPLE ON)
-option(BUILD_HYCAN_TEST ON)
+option(BUILD_HYCAN_EXAMPLE "Build HyCAN Examples" ON)
+option(BUILD_HYCAN_TEST "Build HyCAN Tests" ON)
 
 add_library(HyCAN SHARED)
 file(GLOB_RECURSE HYCAN_SOURCES src/*.cxx)

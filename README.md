@@ -4,15 +4,22 @@
 
 - 日志功能，随时监控CAN总线信息
 - 支持liburing，适用于高频CAN总线
-- 简介的纯模块接口设计，加快编译速度
+- 简洁的纯模块设计，加快编译速度
 
 ## 接入工程
 
-> HyCAN使用C++26构建
+### 前置依赖
+
+- CMake > 3.31
+- Clang > 20 或 GCC > 15
+- Conon > 2
+- linux-modules-extra（如需vcan）
+
+### Conan
 
 ## Todo
 
 - [ ] xir日志库
-- [ ] CTest
+- [x] CTest
 
 ## Credit

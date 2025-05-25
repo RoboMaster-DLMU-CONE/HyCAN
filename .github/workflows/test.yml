@@ -14,11 +14,10 @@ jobs:
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh 20
-          sudo apt install libc++-dev libc++abi-dev
+          sudo apt install -y libc++-dev libc++abi-dev linux-modules-extra-$(uname -r)
 
-      - name: Load can Module
+      - name: Load CAN Module
         run: |
-          sudo apt-get install -y linux-modules-extra-$(uname -r)
           sudo modprobe vcan
           sudo modprobe can
 
