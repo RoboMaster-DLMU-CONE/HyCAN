@@ -9,7 +9,7 @@ module;
 #include <linux/rtnetlink.h>
 #include <net/if.h>
 using std::expected, std::unexpected, std::string, std::string_view, std::format;
-export module HyCAN:VirtualCANCreator;
+export module HyCAN.Interface:VirtualCANCreator;
 
 namespace
 {
