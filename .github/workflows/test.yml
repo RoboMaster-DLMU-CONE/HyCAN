@@ -16,6 +16,11 @@ jobs:
           sudo ./llvm.sh 20
           sudo apt install libc++-dev libc++abi-dev
 
+      - name: Load can Module
+        run: |
+          sudo modprobe vcan
+          sudo modprobe can
+
       - name: Build Project
         uses: threeal/cmake-action@v2.1.0
         with:
