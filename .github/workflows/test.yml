@@ -18,6 +18,7 @@ jobs:
 
       - name: Load can Module
         run: |
+          sudo apt-get install -y linux-modules-extra-$(uname -r)
           sudo modprobe vcan
           sudo modprobe can
 
