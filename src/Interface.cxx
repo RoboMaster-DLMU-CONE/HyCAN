@@ -66,14 +66,13 @@ expected<void, string> create_vcan_interface_if_not_exists(const string_view int
 {
     if (if_nametoindex(interface_name.data()) != 0)
     {
-        return {};
+        return {}; // Already exists
     }
-    if (errno != ENODEV)
+    if (errno != ENODEV) // if_nametoindex failed for a reason other than "No such device"
     {
-        return unexpected(format("Error checking interface '{}': {}", interface_name, strerror(errno)));
+        return unexpected(format("Error checking interface '{}' before creation: {}", interface_name, strerror(errno)));
     }
 
-    // 2. Create Netlink socket
     const int sock = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
     if (sock < 0)
     {
@@ -81,23 +80,18 @@ expected<void, string> create_vcan_interface_if_not_exists(const string_view int
                                  interface_name, strerror(errno)));
     }
 
-    // 3. Prepare Netlink message
-    struct
+    struct NetlinkRequest
     {
         nlmsghdr nlh;
         ifinfomsg ifm;
-        char attrbuf[512];
+        char attrbuf[512]; // Buffer for attributes
     } req{};
 
     req.nlh.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
     req.nlh.nlmsg_type = RTM_NEWLINK;
-    // NLM_F_CREATE: create if it doesn't exist.
-    // NLM_F_EXCL: fail if it does exist (good for ensuring atomicity if we didn't check above).
-    // NLM_F_ACK: request an acknowledgement.
-    req.nlh.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL;
-    req.nlh.nlmsg_seq = 1; // Sequence number
+    req.nlh.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL | NLM_F_ACK; // Added NLM_F_ACK
+    req.nlh.nlmsg_seq = 1; // Sequence number for ACK matching
     req.nlh.nlmsg_pid = static_cast<__u32>(getpid());
-
     req.ifm.ifi_family = AF_UNSPEC;
 
     if (!rtattr_add_data(&req.nlh, sizeof(req), IFLA_IFNAME, interface_name.data(), interface_name.length() + 1))
@@ -119,28 +113,82 @@ expected<void, string> create_vcan_interface_if_not_exists(const string_view int
         close(sock);
         return unexpected(format("Error: Not enough buffer space for IFLA_INFO_KIND for '{}'", interface_name));
     }
-
     rtattr_nest_end(&req.nlh, linkinfo);
-
 
     if (send(sock, &req.nlh, req.nlh.nlmsg_len, 0) < 0)
     {
         const int send_errno = errno;
         close(sock);
-        if (send_errno == EEXIST)
-        {
-            if (if_nametoindex(interface_name.data()) != 0)
-            {
-                return {};
-            }
-        }
         return unexpected(format("Error: Failed to send Netlink message to create interface '{}': {}",
                                  interface_name, strerror(send_errno)));
     }
 
+    // Wait for ACK
+    char recv_buf[NLMSG_ALIGN(NLMSG_HDRLEN) + NLMSG_ALIGN(sizeof(struct nlmsgerr)) + 1024]; // Buffer for ACK
+    ssize_t len = recv(sock, recv_buf, sizeof(recv_buf), 0);
+    if (len < 0)
+    {
+        const int recv_errno = errno;
+        close(sock);
+        return unexpected(format("Error: Failed to receive ACK for interface '{}' creation: {}",
+                                 interface_name, strerror(recv_errno)));
+    }
+
+    bool success = false;
+    for (auto* ack_nlh = reinterpret_cast<nlmsghdr*>(recv_buf); NLMSG_OK(ack_nlh, static_cast<__u32>(len)); ack_nlh
+         = NLMSG_NEXT(ack_nlh, len))
+    {
+        if (ack_nlh->nlmsg_pid != static_cast<__u32>(getpid()) || ack_nlh->nlmsg_seq != req.nlh.nlmsg_seq)
+        {
+            // Not our ACK, or from an old request, skip.
+            continue;
+        }
+
+        if (ack_nlh->nlmsg_type == NLMSG_ERROR)
+        {
+            const nlmsgerr* err = static_cast<nlmsgerr*>(NLMSG_DATA(ack_nlh));
+            if (err->error == 0)
+            {
+                success = true; // Kernel confirmed success
+                break;
+            }
+            // If error is EEXIST, it means the interface was created concurrently.
+            // We can treat this as success if if_nametoindex now finds it.
+            if (-(err->error) == EEXIST)
+            {
+                if (if_nametoindex(interface_name.data()) != 0)
+                {
+                    success = true;
+                    break;
+                }
+            }
+            // Other error from kernel
+            close(sock);
+            return unexpected(format("Error: Netlink ACK reported error {} for creating interface '{}': {}",
+                                     -(err->error), interface_name, strerror(-(err->error))));
+        }
+        // Potentially other message types, we are only interested in NLMSG_ERROR for ACK
+    }
+
     close(sock);
-    return {};
+
+    if (!success)
+    {
+        // If loop finished and success is still false, means no valid ACK or ACK reported error not handled above.
+        // This could happen if the ACK was malformed or unexpected.
+        // Or if EEXIST was reported but the interface still doesn't exist.
+        // Re-check one last time.
+        if (if_nametoindex(interface_name.data()) != 0)
+        {
+            return {}; // It exists now, so consider it a success.
+        }
+        return unexpected(
+            format("Error: Failed to confirm creation of interface '{}' via Netlink ACK.", interface_name));
+    }
+
+    return {}; // Success
 }
+
 
 export enum class CANInterfaceType
 {

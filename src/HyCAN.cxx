@@ -1,9 +1,7 @@
 module;
-#include <expected>
 #include <iostream>
 export module HyCAN;
 import :Interface;
-using enum CANInterfaceType;
 
 export void init()
 {
