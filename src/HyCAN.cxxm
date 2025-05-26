@@ -1,6 +1,5 @@
 module;
-#include <iostream>
-
+#include <xtr/logger.hpp>
 export module HyCAN;
 import HyCAN.Interface;
 
@@ -8,16 +7,16 @@ export namespace HyCAN
 {
     void init()
     {
-        std::cout << "Hello HyCAN" << std::endl;
+        xtr::logger log;
+        xtr::sink s = log.get_sink("HyCAN Init");
+        XTR_LOGL(info, s, "Hello HyCAN!");
         if (const auto result = Interface::set_interface_up<Interface::Virtual>("vcan0"); !result)
         {
-            std::cerr << "Failed to set up interface. Details: " << result.error() <<
-                std::endl;
+            XTR_LOGL(error, s, "Failed to set up interface. Details: {}", result.error());
         }
         if (const auto result = Interface::set_interface_down("vcan0"); !result)
         {
-            std::cerr << "Failed to set down interface. Details: " << result.error() <<
-                std::endl;
+            XTR_LOGL(error, s, "Failed to set down interface. Details: {}", result.error());
         }
     }
 }
