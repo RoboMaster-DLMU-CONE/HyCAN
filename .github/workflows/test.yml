@@ -30,10 +30,10 @@ jobs:
       - name: Install Conan dependencies
         run: |
           conan install . --build=missing \
-          -s compiler=clang \
-          -s compiler.cppstd=gnu23 \
-          -s compiler.libcxx=libstdc++11 \
-          -s compiler.version=19
+            -s compiler=clang \
+            -s compiler.cppstd=gnu23 \
+            -s compiler.libcxx=libstdc++11 \
+            -s compiler.version=19
 
       - name: Build Project
         run: |
