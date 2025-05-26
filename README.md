@@ -13,13 +13,22 @@
 - CMake > 3.31
 - Clang > 20 或 GCC > 14
 - Conon > 2
-- linux-modules-extra（如需vcan）
+- linux-modules-extra
+
+使用`modprobe`激活Linux的`CAN`和`VCAN`模组：
+
+```shell
+sudo modprobe vcan
+sudo modprobe can
+```
 
 ### Conan
 
 ## Todo
 
-- [ ] xir日志库
+- [x] xtr日志库
 - [x] CTest
 
 ## Credit
+
+- [xtr日志库](https://github.com/choll/xtr)

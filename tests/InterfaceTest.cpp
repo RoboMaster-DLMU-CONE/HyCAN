@@ -7,7 +7,7 @@
 #include <net/if.h>
 #include <unistd.h>
 
-import HyCAN.Interface;
+import HyCAN.Hardware.Interface;
 
 // Helper function to check if a network interface exists
 bool check_interface_exists(const std::string_view interface_name)
@@ -36,7 +36,7 @@ int main()
     {
         std::cout << "INFO: Test interface '" << test_interface_name << "' detected. Attempting pre-test takedown." <<
             std::endl;
-        if (auto cleanup_down_result = HyCAN::Interface::set_interface_down(test_interface_name); !cleanup_down_result)
+        if (auto cleanup_down_result = HyCAN::Hardware::set_interface_down(test_interface_name); !cleanup_down_result)
         {
             std::cerr << "WARN: Pre-test cleanup of '" << test_interface_name << "' failed: " << cleanup_down_result.
                 error() << std::endl;
@@ -49,7 +49,7 @@ int main()
 
     // --- Test 1: Set Virtual Interface UP ---
     std::cout << "\nTEST 1: Setting up virtual interface '" << test_interface_name << "'..." << std::endl;
-    auto up_result = HyCAN::Interface::set_interface_up<HyCAN::Interface::CANInterfaceType::Virtual>(
+    auto up_result = HyCAN::Hardware::set_interface_up<HyCAN::Hardware::InterfaceType::Virtual>(
         test_interface_name);
 
     if (!up_result)
@@ -84,7 +84,7 @@ int main()
         // Proceed if the set_interface_up call itself didn't return an error.
         std::cout << "\nTEST 2: Setting down interface '" << test_interface_name << "'..." << std::endl;
 
-        if (auto down_result = HyCAN::Interface::set_interface_down(test_interface_name); !down_result)
+        if (auto down_result = HyCAN::Hardware::set_interface_down(test_interface_name); !down_result)
         {
             std::cerr << "FAIL: set_interface_down for '" << test_interface_name << "' failed." << std::endl;
             std::cerr << "      Error: " << down_result.error() << std::endl;

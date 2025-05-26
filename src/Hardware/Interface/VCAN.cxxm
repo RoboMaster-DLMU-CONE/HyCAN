@@ -8,7 +8,7 @@ module;
 #include <sys/socket.h>
 #include <linux/rtnetlink.h>
 #include <net/if.h>
-export module HyCAN.Interface:VirtualCANCreator;
+export module HyCAN.Hardware.Interface:VCAN;
 
 namespace
 {
@@ -63,7 +63,7 @@ namespace
 using std::expected, std::unexpected, std::string, std::string_view, std::format;
 
 export
-namespace HyCAN::Interface
+namespace HyCAN::Hardware
 {
     expected<void, string> create_vcan_interface_if_not_exists(const string_view interface_name)
     {

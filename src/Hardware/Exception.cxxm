@@ -1,0 +1,11 @@
+module;
+#include <exception>
+export module HyCAN.Hardware.Exception;
+
+using std::exception;
+export namespace HyCAN::Hardware
+{
+    class HardwareException : public exception
+    {
+    };
+}

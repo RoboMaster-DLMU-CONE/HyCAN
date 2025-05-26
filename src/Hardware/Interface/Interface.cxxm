@@ -4,25 +4,78 @@ module;
 #include <string>
 #include <string_view>
 #include <format>
+#include <exception>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <linux/rtnetlink.h>
 #include <net/if.h>
-export module HyCAN.Interface;
-export import :VirtualCANCreator;
-using std::expected, std::unexpected, std::string, std::string_view, std::format;
 
-export namespace HyCAN::Interface
+#include <xtr/logger.hpp>
+export module HyCAN.Hardware.Interface;
+export import :VCAN;
+import HyCAN.Hardware.Exception;
+using std::expected, std::unexpected, std::string, std::string_view, std::format, std::exception;
+
+export namespace HyCAN::Hardware
 {
-    enum class CANInterfaceType
+    class InterfaceException final : public HardwareException
+    {
+    };
+
+    enum class InterfaceType
     {
         Virtual,
         Physics
     };
 
-    using enum CANInterfaceType;
+    using enum InterfaceType;
 
-    template <CANInterfaceType type>
+    template <InterfaceType type>
+    class Interface
+    {
+        explicit Interface(std::string_view interface_name);
+        void up();
+        void down();
+
+    private:
+        int sock{};
+
+        struct NetlinkIfInfoRequest
+        {
+            nlmsghdr nlh;
+            ifinfomsg ifm;
+        };
+
+        NetlinkIfInfoRequest req{};
+        xtr::logger log;
+        xtr::sink s;
+    };
+
+    template <InterfaceType type>
+    Interface<type>::Interface(const std::string_view interface_name)
+    {
+        s = log.get_sink(format("HyCAN Interface_{}", interface_name));
+        if constexpr (type == Virtual)
+        {
+            if (auto result = create_vcan_interface_if_not_exists(interface_name); !result)
+            {
+                XTR_LOGL(error, s, "Error during vcan creation: {}", result.error());
+                throw InterfaceException();
+            }
+        }
+    }
+
+    template <InterfaceType type>
+    void Interface<type>::up()
+    {
+    }
+
+    template <InterfaceType type>
+    void Interface<type>::down()
+    {
+    }
+
+    template <InterfaceType type>
     expected<void, string> set_interface_up(const std::string_view interface_name)
     {
         if constexpr (type == Virtual)
