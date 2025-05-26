@@ -11,7 +11,7 @@
 ### 前置依赖
 
 - CMake > 3.31
-- Clang > 20 或 GCC > 15
+- Clang > 20 或 GCC > 14
 - Conon > 2
 - linux-modules-extra（如需vcan）
 

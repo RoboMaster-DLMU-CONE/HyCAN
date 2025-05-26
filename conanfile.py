@@ -12,16 +12,19 @@ class HyCANConan(ConanFile):
     author = "MoonFeather moonfeather120@outlook.com"  # Your name and email
     url = "https://github.com/RoboMaster-DLMU-CONE/HyCAN"  # URL to your project
     description = "Modern high-performance Linux C++ CAN communication protocol library"
-    topics = ("canbus", "linux", "c++26", "network")
+    topics = ("canbus", "linux", "c++23", "network")
     settings = "os", "compiler", "build_type", "arch"
     exports_sources = "CMakeLists.txt", "src/*", "example/*", "README.md"
 
     def layout(self):
         cmake_layout(self)
 
+    def requirements(self):
+        self.requires("xtr/2.1.2")
+
     def generate(self):
         tc = CMakeToolchain(self)
-        tc.variables["CMAKE_CXX_STANDARD"] = "26"
+        tc.variables["CMAKE_CXX_STANDARD"] = "23"
         tc.generate()
 
     def build(self):
