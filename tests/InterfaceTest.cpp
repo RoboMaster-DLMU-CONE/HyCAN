@@ -8,6 +8,8 @@
 #include <unistd.h>
 
 import HyCAN.Hardware.Interface;
+using HyCAN::Hardware::Interface;
+using enum HyCAN::Hardware::InterfaceType;
 
 // Helper function to check if a network interface exists
 bool check_interface_exists(const std::string_view interface_name)
@@ -30,27 +32,11 @@ int main()
         std::endl;
     std::cout << "INFO: Using test interface: " << test_interface_name << std::endl;
 
-    // --- Pre-Test Cleanup Attempt ---
-    // Try to bring down the interface if it exists from a previous run to ensure a cleaner state.
-    if (check_interface_exists(test_interface_name))
-    {
-        std::cout << "INFO: Test interface '" << test_interface_name << "' detected. Attempting pre-test takedown." <<
-            std::endl;
-        if (auto cleanup_down_result = HyCAN::Hardware::set_interface_down(test_interface_name); !cleanup_down_result)
-        {
-            std::cerr << "WARN: Pre-test cleanup of '" << test_interface_name << "' failed: " << cleanup_down_result.
-                error() << std::endl;
-        }
-        else
-        {
-            std::cout << "INFO: Pre-test cleanup of '" << test_interface_name << "' successful." << std::endl;
-        }
-    }
+    auto interface = Interface<Virtual>(test_interface_name);
 
     // --- Test 1: Set Virtual Interface UP ---
     std::cout << "\nTEST 1: Setting up virtual interface '" << test_interface_name << "'..." << std::endl;
-    auto up_result = HyCAN::Hardware::set_interface_up<HyCAN::Hardware::InterfaceType::Virtual>(
-        test_interface_name);
+    auto up_result = interface.up();
 
     if (!up_result)
     {
@@ -84,7 +70,7 @@ int main()
         // Proceed if the set_interface_up call itself didn't return an error.
         std::cout << "\nTEST 2: Setting down interface '" << test_interface_name << "'..." << std::endl;
 
-        if (auto down_result = HyCAN::Hardware::set_interface_down(test_interface_name); !down_result)
+        if (auto down_result = interface.down(); !down_result)
         {
             std::cerr << "FAIL: set_interface_down for '" << test_interface_name << "' failed." << std::endl;
             std::cerr << "      Error: " << down_result.error() << std::endl;

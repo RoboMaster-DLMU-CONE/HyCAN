@@ -13,14 +13,10 @@ module;
 #include <xtr/logger.hpp>
 export module HyCAN.Hardware.Interface;
 export import :VCAN;
-import HyCAN.Hardware.Exception;
 using std::expected, std::unexpected, std::string, std::string_view, std::format, std::exception;
 
 export namespace HyCAN::Hardware
 {
-    class InterfaceException final : public HardwareException
-    {
-    };
 
     enum class InterfaceType
     {
@@ -33,12 +29,14 @@ export namespace HyCAN::Hardware
     template <InterfaceType type>
     class Interface
     {
+    public:
         explicit Interface(std::string_view interface_name);
-        void up();
-        void down();
+        expected<void, string> up();
+        expected<void, string> down();
 
     private:
         int sock{};
+        std::string_view interface_name;
 
         struct NetlinkIfInfoRequest
         {
@@ -52,7 +50,7 @@ export namespace HyCAN::Hardware
     };
 
     template <InterfaceType type>
-    Interface<type>::Interface(const std::string_view interface_name)
+    Interface<type>::Interface(const std::string_view interface_name): interface_name(interface_name)
     {
         s = log.get_sink(format("HyCAN Interface_{}", interface_name));
         if constexpr (type == Virtual)
@@ -60,38 +58,13 @@ export namespace HyCAN::Hardware
             if (auto result = create_vcan_interface_if_not_exists(interface_name); !result)
             {
                 XTR_LOGL(error, s, "Error during vcan creation: {}", result.error());
-                throw InterfaceException();
             }
         }
     }
 
     template <InterfaceType type>
-    void Interface<type>::up()
+    expected<void, string> Interface<type>::up()
     {
-    }
-
-    template <InterfaceType type>
-    void Interface<type>::down()
-    {
-    }
-
-    template <InterfaceType type>
-    expected<void, string> set_interface_up(const std::string_view interface_name)
-    {
-        if constexpr (type == Virtual)
-        {
-            if (auto result = create_vcan_interface_if_not_exists(interface_name); !result)
-            {
-                return result;
-            }
-        }
-        int sock{};
-        struct
-        {
-            nlmsghdr nlh;
-            ifinfomsg ifm;
-        } req{};
-
         const unsigned int if_index = if_nametoindex(interface_name.data());
         if (if_index == 0)
         {
@@ -129,15 +102,9 @@ export namespace HyCAN::Hardware
         return {};
     }
 
-    expected<void, string> set_interface_down(const string_view interface_name)
+    template <InterfaceType type>
+    expected<void, string> Interface<type>::down()
     {
-        int sock{};
-        struct NetlinkIfInfoRequest
-        {
-            nlmsghdr nlh;
-            ifinfomsg ifm;
-        } req{};
-
         const unsigned int if_index = if_nametoindex(interface_name.data());
         if (if_index == 0)
         {

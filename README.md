@@ -22,7 +22,12 @@ sudo modprobe vcan
 sudo modprobe can
 ```
 
-### Conan
+### Conan安装依赖
+
+```shell
+conan install . --build=missing
+```
+你可能需要调整使用的编译器。用`export CC=clang-19`来导出环境变量；
 
 ## Todo
 
