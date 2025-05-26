@@ -11,21 +11,10 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          # Enable multiverse repository
-          sudo add-apt-repository multiverse
-          sudo apt-get update
-
-          # Install GCC-14
-          sudo apt-get install -y gcc-14 g++-14 linux-modules-extra-$(uname -r)
-
-          # Configure update-alternatives for GCC-14
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 140 \
-                                   --slave /usr/bin/g++ g++ /usr/bin/g++-14 \
-                                   --slave /usr/bin/gcov gcov /usr/bin/gcov-14
-
-          # Verify GCC version
-          gcc --version
-          g++ --version
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 19
+          sudo apt install -y clang-tools-19 libc++-dev libc++abi-dev linux-modules-extra-$(uname -r)
 
       - name: Load CAN Module
         run: |
@@ -39,7 +28,7 @@ jobs:
         uses: conan-io/setup-conan@v1
 
       - name: Install Conan dependencies
-        run: conan install . --build=missing -s compiler.cppstd=gnu23
+        run: conan install . --build=missing -s compiler=clang compiler.cppstd=gnu23 compiler.libcxx=libstdc++11 compiler.version=19
 
       - name: Build Project
         run: |

@@ -11,8 +11,8 @@
 ### 前置依赖
 
 - CMake > 3.31
-- Clang > 20 或 GCC > 14
-- Conon > 2
+- Clang = 19
+- Conan > 2
 - linux-modules-extra
 
 使用`modprobe`激活Linux的`CAN`和`VCAN`模组：
