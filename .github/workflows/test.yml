@@ -28,7 +28,10 @@ jobs:
         uses: conan-io/setup-conan@v1
 
       - name: Install Conan dependencies
-        run: conan install . --build=missing -s compiler=clang -s compiler.cppstd=gnu23 -s compiler.libcxx=libstdc++11 -s compiler.version=19 -s:b compiler=clang -s:b compiler.cppstd=gnu23 -s:b compiler.libcxx=libstdc++11 -s:b compiler.version=19
+        run: |
+          export CC=clang-19
+          export CXX=clang++-19
+          conan install . --build=missing -s compiler=clang -s compiler.cppstd=gnu23 -s compiler.libcxx=libstdc++11 -s compiler.version=19 -s:b compiler=clang -s:b compiler.cppstd=gnu23 -s:b compiler.libcxx=libstdc++11 -s:b compiler.version=19
 
       - name: Build Project
         run: |
