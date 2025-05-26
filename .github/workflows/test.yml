@@ -32,15 +32,20 @@ jobs:
           sudo modprobe vcan
           sudo modprobe can
 
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v2
+
+      - name: Install Conan
+        uses: conan-io/setup-conan@v1
+
+      - name: Install Conan dependencies
+        run: conan install . --build=missing
+
       - name: Build Project
-        uses: threeal/cmake-action@v2.1.0
-        with:
-          generator: Ninja
-          cxx-compiler: g++
-          c-compiler: gcc
-          options: |
-            BUILD_HYCAN_TEST=ON
-            CMAKE_BUILD_TYPE=Release
+        run: |
+          cd build
+          cmake --preset conan-release -G Ninja
+          cmake --build --preset conan-release -G Ninja -DBUILD_HYCAN_TEST=ON
 
       - name: Test Project
         run: |
