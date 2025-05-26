@@ -48,5 +48,5 @@ jobs:
 
       - name: Test Project
         run: |
-          cd build
+          cd build/Release
           sudo ctest --output-on-failure
