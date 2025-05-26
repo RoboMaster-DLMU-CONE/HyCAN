@@ -43,8 +43,8 @@ jobs:
 
       - name: Build Project
         run: |
-          cmake --preset conan-release -G Ninja
-          cmake --build --preset conan-release -G Ninja -DBUILD_HYCAN_TEST=ON
+          cmake --preset conan-release -G Ninja -DBUILD_HYCAN_TEST=ON
+          cmake --build --preset conan-release
 
       - name: Test Project
         run: |
