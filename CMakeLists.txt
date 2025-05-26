@@ -8,7 +8,7 @@ option(BUILD_HYCAN_EXAMPLE "Build HyCAN Examples" ON)
 option(BUILD_HYCAN_TEST "Build HyCAN Tests" ON)
 
 add_library(HyCAN SHARED)
-file(GLOB_RECURSE HYCAN_SOURCES src/*.cxx)
+file(GLOB_RECURSE HYCAN_SOURCES src/*.cxxm)
 target_sources(HyCAN PUBLIC
         FILE_SET CXX_MODULES
         FILES ${HYCAN_SOURCES}

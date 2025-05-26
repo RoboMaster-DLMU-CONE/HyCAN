@@ -8,9 +8,9 @@ module;
 #include <sys/socket.h>
 #include <linux/rtnetlink.h>
 #include <net/if.h>
-using std::expected, std::unexpected, std::string, std::string_view, std::format;
 export module HyCAN.Interface;
-import :VirtualCANCreator;
+export import :VirtualCANCreator;
+using std::expected, std::unexpected, std::string, std::string_view, std::format;
 
 export namespace HyCAN::Interface
 {
@@ -42,13 +42,13 @@ export namespace HyCAN::Interface
         const unsigned int if_index = if_nametoindex(interface_name.data());
         if (if_index == 0)
         {
-            return unexpected(format("Error: Cannot find interface '{}': {}", interface_name, strerror(errno)));
+            return unexpected<string>(format("Error: Cannot find interface '{}': {}", interface_name, strerror(errno)));
         }
         sock = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
         if (sock < 0)
         {
-            return unexpected(format("Error: Cannot open Netlink socket for interface '{}': {}", interface_name,
-                                     strerror(errno)));
+            return unexpected<string>(format("Error: Cannot open Netlink socket for interface '{}': {}", interface_name,
+                                             strerror(errno)));
         }
 
         req.nlh = {
@@ -68,8 +68,9 @@ export namespace HyCAN::Interface
         if (send(sock, &req, req.nlh.nlmsg_len, 0) < 0)
         {
             close(sock);
-            return unexpected(format("Error: Failed to send Netlink message for interface '{}': {}", interface_name,
-                                     strerror(errno)));
+            return unexpected<string>(format("Error: Failed to send Netlink message for interface '{}': {}",
+                                             interface_name,
+                                             strerror(errno)));
         }
         close(sock);
         return {};
@@ -87,13 +88,13 @@ export namespace HyCAN::Interface
         const unsigned int if_index = if_nametoindex(interface_name.data());
         if (if_index == 0)
         {
-            return unexpected(format("错误: 找不到要关闭的接口 '{}': {}", interface_name, strerror(errno)));
+            return unexpected<string>(format("错误: 找不到要关闭的接口 '{}': {}", interface_name, strerror(errno)));
         }
 
         sock = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
         if (sock < 0)
         {
-            return unexpected(format("错误: 无法为接口 '{}' 打开Netlink套接字: {}", interface_name, strerror(errno)));
+            return unexpected<string>(format("错误: 无法为接口 '{}' 打开Netlink套接字: {}", interface_name, strerror(errno)));
         }
 
         req.nlh = {
@@ -114,7 +115,7 @@ export namespace HyCAN::Interface
         {
             const int send_errno = errno;
             close(sock);
-            return unexpected(format("错误: 发送Netlink消息以关闭接口 '{}' 失败: {}", interface_name, strerror(send_errno)));
+            return unexpected<string>(format("错误: 发送Netlink消息以关闭接口 '{}' 失败: {}", interface_name, strerror(send_errno)));
         }
 
         // 等待ACK
@@ -124,7 +125,7 @@ export namespace HyCAN::Interface
         {
             const int recv_errno = errno;
             close(sock);
-            return unexpected(format("错误: 接收关闭接口 '{}' 的ACK失败: {}", interface_name, strerror(recv_errno)));
+            return unexpected<string>(format("错误: 接收关闭接口 '{}' 的ACK失败: {}", interface_name, strerror(recv_errno)));
         }
 
         bool ack_success = false;
@@ -145,15 +146,15 @@ export namespace HyCAN::Interface
                     break;
                 }
                 close(sock);
-                return unexpected(format("错误: Netlink ACK报告关闭接口 '{}' 时出错 {}: {}", -(err->error), interface_name,
-                                         strerror(-(err->error))));
+                return unexpected<string>(format("错误: Netlink ACK报告关闭接口 '{}' 时出错 {}: {}", -(err->error), interface_name,
+                                                 strerror(-(err->error))));
             }
         }
         close(sock);
 
         if (!ack_success)
         {
-            return unexpected(format("错误: 未能通过Netlink ACK确认接口 '{}' 的关闭。", interface_name));
+            return unexpected<string>(format("错误: 未能通过Netlink ACK确认接口 '{}' 的关闭。", interface_name));
         }
         return {};
     }

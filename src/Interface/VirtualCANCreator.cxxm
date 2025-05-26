@@ -8,7 +8,6 @@ module;
 #include <sys/socket.h>
 #include <linux/rtnetlink.h>
 #include <net/if.h>
-using std::expected, std::unexpected, std::string, std::string_view, std::format;
 export module HyCAN.Interface:VirtualCANCreator;
 
 namespace
@@ -60,6 +59,8 @@ namespace
             char*>(rta_container_start);
     }
 }
+
+using std::expected, std::unexpected, std::string, std::string_view, std::format;
 
 export
 namespace HyCAN::Interface

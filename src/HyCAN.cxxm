@@ -1,7 +1,9 @@
 module;
 #include <iostream>
+
 export module HyCAN;
 import HyCAN.Interface;
+
 export namespace HyCAN
 {
     void init()
