@@ -5,7 +5,7 @@ from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
 from conan.tools.files import copy
 
 
-class HyCANConan(ConanFile):
+class HyCANRecipe(ConanFile):
     name = "HyCAN"
     version = "0.1.0"  # Set your library's version
     license = "BSD-3-Clause"  # Specify your project's license
@@ -23,6 +23,9 @@ class HyCANConan(ConanFile):
         self.requires("xtr/2.1.2")
 
     def generate(self):
+        deps = CMakeDeps(self)
+        deps.generate()
+        
         tc = CMakeToolchain(self)
         tc.variables["CMAKE_CXX_STANDARD"] = "23"
         tc.generate()

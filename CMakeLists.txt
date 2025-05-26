@@ -7,15 +7,15 @@ set(CMAKE_CXX_STANDARD 23)
 option(BUILD_HYCAN_EXAMPLE "Build HyCAN Examples" ON)
 option(BUILD_HYCAN_TEST "Build HyCAN Tests" ON)
 
+find_package(xtr REQUIRED)
+
 add_library(HyCAN SHARED)
 file(GLOB_RECURSE HYCAN_SOURCES src/*.cxxm)
 target_sources(HyCAN PUBLIC
         FILE_SET CXX_MODULES
         FILES ${HYCAN_SOURCES}
 )
-# xtr依赖的fmt库目前使用clang-20构建存在问题，等待修复中
-# find_package(xtr REQUIRED)
-#target_link_libraries(HyCAN PRIVATE xtr::xtr)
+target_link_libraries(HyCAN PRIVATE xtr::xtr)
 
 if (BUILD_HYCAN_EXAMPLE)
     include(HyCANExamples)
