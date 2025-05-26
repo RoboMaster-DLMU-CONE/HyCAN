@@ -35,6 +35,8 @@ jobs:
 
       - name: Build Project
         run: |
+          export CC=clang-19
+          export CXX=clang++-19
           cmake --preset conan-release -G Ninja -DBUILD_HYCAN_TEST=ON
           cmake --build --preset conan-release
 
