@@ -9,7 +9,7 @@ module;
 #include <xtr/logger.hpp>
 export module HyCAN.Interface;
 import HyCAN.Interface.Logger;
-import HyCAN.Interface.Netlink;
+export import HyCAN.Interface.Netlink;
 import HyCAN.Interface.Reaper;
 using std::expected, std::unexpected, std::unique_ptr, std::string, std::string_view, std::format, std::exception;
 using xtr::sink;

@@ -49,16 +49,14 @@ export namespace HyCAN
         s = interface_logger.get_sink(format("HyCAN Netlink_{}", interface_name));
         if constexpr (type == InterfaceType::Virtual)
         {
-            if (auto result = create_vcan_interface_if_not_exists(interface_name); !result)
-            {
-                XTR_LOGL(fatal, s, "Error during vcan creation: {}", result.error());
-            }
+            create_vcan_interface_if_not_exists(interface_name, s);
         }
     }
 
     template <InterfaceType type>
     void Netlink<type>::up()
     {
+        XTR_LOGL(info, s, "Setting up Netlink for {}", interface_name);
         const unsigned int if_index = if_nametoindex(interface_name.data());
         if (if_index == 0)
         {
@@ -98,6 +96,7 @@ export namespace HyCAN
     template <InterfaceType type>
     void Netlink<type>::down()
     {
+        XTR_LOGL(info, s, "Setting down Netlink for {}", interface_name);
         const unsigned int if_index = if_nametoindex(interface_name.data());
         if (if_index == 0)
         {

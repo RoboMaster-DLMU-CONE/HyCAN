@@ -73,9 +73,8 @@ export namespace HyCAN
         {
             if (const ssize_t nbytes = read(sock_fd, &frame, sizeof(can_frame)); nbytes > 0)
             {
-
             }
-            else if (nbytes == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
+            else if (nbytes == -1 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == ENETDOWN))
             {
                 break;
             }

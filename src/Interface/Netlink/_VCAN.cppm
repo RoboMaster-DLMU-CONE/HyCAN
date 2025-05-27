@@ -8,6 +8,8 @@ module;
 #include <sys/socket.h>
 #include <linux/rtnetlink.h>
 #include <net/if.h>
+
+#include <xtr/logger.hpp>
 export module HyCAN.Interface.Netlink:VCAN;
 
 struct NetlinkRequest
@@ -70,28 +72,29 @@ namespace
     }
 }
 
-using std::expected, std::unexpected, std::string, std::string_view, std::format;
+using std::expected, std::unexpected, std::string, std::string_view, std::format, xtr::sink;
 
 export
 namespace HyCAN
 {
-    expected<void, string> create_vcan_interface_if_not_exists(const string_view interface_name)
+    void create_vcan_interface_if_not_exists(const string_view interface_name, sink& s)
     {
+        XTR_LOGL(info, s, "Creating VCAN for {}", interface_name);
         if (if_nametoindex(interface_name.data()) != 0)
         {
-            return {}; // Already exists
+            XTR_LOGL(info, s, "{} already exists.", interface_name);
+            return; // Already exists
         }
         if (errno != ENODEV) // if_nametoindex failed for a reason other than "No such device"
         {
-            return unexpected(format("Error checking interface '{}' before creation: {}", interface_name,
-                                     strerror(errno)));
+            XTR_LOGL(fatal, s, "Error checking interface '{}' before creation: {}", interface_name, strerror(errno));
         }
 
         const int sock = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
         if (sock < 0)
         {
-            return unexpected(format("Error: Cannot open Netlink socket to create interface '{}': {}",
-                                     interface_name, strerror(errno)));
+            XTR_LOGL(fatal, s, "Error: Cannot open Netlink socket to create interface '{}': {}", interface_name,
+                     strerror(errno));
         }
 
         NetlinkRequest req{};
@@ -107,21 +110,21 @@ namespace HyCAN
         if (!rtattr_add_data(&req.nlh, IFLA_IFNAME, interface_name.data(), interface_name.length() + 1))
         {
             close(sock);
-            return unexpected(format("Error: Not enough buffer space for IFLA_IFNAME for '{}'", interface_name));
+            XTR_LOGL(fatal, s, "Error: Not enough buffer space for IFLA_IFNAME for '{}'", interface_name);
         }
 
         rtattr* linkinfo = rtattr_nest_begin(&req.nlh, IFLA_LINKINFO);
         if (!linkinfo)
         {
             close(sock);
-            return unexpected(format("Error: Not enough buffer space for IFLA_LINKINFO for '{}'", interface_name));
+            XTR_LOGL(fatal, s, "Error: Not enough buffer space for IFLA_LINKINFO for '{}'", interface_name);
         }
 
         if (!rtattr_add_data(&req.nlh, IFLA_INFO_KIND, "vcan", 5))
         {
             rtattr_nest_end(&req.nlh, linkinfo);
             close(sock);
-            return unexpected(format("Error: Not enough buffer space for IFLA_INFO_KIND for '{}'", interface_name));
+            XTR_LOGL(fatal, s, "Error: Not enough buffer space for IFLA_INFO_KIND for '{}'", interface_name);
         }
         rtattr_nest_end(&req.nlh, linkinfo);
 
@@ -129,8 +132,8 @@ namespace HyCAN
         {
             const int send_errno = errno;
             close(sock);
-            return unexpected(format("Error: Failed to send Netlink message to create interface '{}': {}",
-                                     interface_name, strerror(send_errno)));
+            XTR_LOGL(fatal, s, "Error: Failed to send Netlink message to create interface '{}': {}",
+                     interface_name, strerror(send_errno));
         }
 
         // Wait for ACK
@@ -140,8 +143,8 @@ namespace HyCAN
         {
             const int recv_errno = errno;
             close(sock);
-            return unexpected(format("Error: Failed to receive ACK for interface '{}' creation: {}",
-                                     interface_name, strerror(recv_errno)));
+            XTR_LOGL(fatal, s, "Error: Failed to receive ACK for interface '{}' creation: {}",
+                     interface_name, strerror(recv_errno));
         }
 
         bool success = false;
@@ -174,8 +177,8 @@ namespace HyCAN
                 }
                 // Other error from kernel
                 close(sock);
-                return unexpected(format("Error: Netlink ACK reported error {} for creating interface '{}': {}",
-                                         -(err->error), interface_name, strerror(-(err->error))));
+                XTR_LOGL(fatal, s, "Error: Netlink ACK reported error {} for creating interface '{}': {}",
+                         -(err->error), interface_name, strerror(-(err->error)));
             }
             // Potentially other message types, we are only interested in NLMSG_ERROR for ACK
         }
@@ -190,13 +193,10 @@ namespace HyCAN
             // Re-check one last time.
             if (if_nametoindex(interface_name.data()) != 0)
             {
-                return {}; // It exists now, so consider it a success.
+                return; // It exists now, so consider it a success.
             }
-            return unexpected(
-                format("Error: Failed to confirm creation of interface '{}' via Netlink ACK.", interface_name));
+            XTR_LOGL(fatal, s,
+                     "Error: Failed to confirm creation of interface '{}' via Netlink ACK.", interface_name);
         }
-
-        return {}; // Success
     }
 }
-
