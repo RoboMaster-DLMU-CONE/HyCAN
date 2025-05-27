@@ -117,7 +117,7 @@ namespace HyCAN
             return unexpected(format("Error: Not enough buffer space for IFLA_LINKINFO for '{}'", interface_name));
         }
 
-        if (const auto kind = "vcan"; !rtattr_add_data(&req.nlh, IFLA_INFO_KIND, kind, strlen(kind) + 1))
+        if (!rtattr_add_data(&req.nlh, IFLA_INFO_KIND, "vcan", 5))
         {
             rtattr_nest_end(&req.nlh, linkinfo);
             close(sock);
