@@ -21,7 +21,7 @@ export namespace HyCAN
     class Reaper
     {
     public:
-        explicit Reaper(string_view interface_name, int sock_fd);
+        explicit Reaper(string_view interface_name);
         Reaper() = delete;
         Reaper(const Reaper& other) = delete;
         Reaper(Reaper&& other) = delete;
@@ -30,7 +30,7 @@ export namespace HyCAN
 
     private:
         void reap_process(const stop_token& stop_token);
-        int sock_fd;
+        Socket socket;
         int thread_event_fd{};
         int epoll_fd{};
         sink s;
@@ -38,10 +38,10 @@ export namespace HyCAN
         jthread reap_thread;
     };
 
-    Reaper::Reaper(const string_view interface_name, const int sock_fd): sock_fd(sock_fd),
-                                                                         interface_name(interface_name)
+    Reaper::Reaper(const string_view interface_name): socket(interface_name), interface_name(interface_name)
     {
         s = interface_logger.get_sink(format("ReaperThread_{}", interface_name));
+
         epoll_fd = epoll_create(256);
         if (epoll_fd == -1)
         {
