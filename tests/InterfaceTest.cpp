@@ -7,14 +7,14 @@
 #include <net/if.h>
 #include <unistd.h>
 
-import HyCAN.Hardware.Interface;
-using HyCAN::Hardware::Interface;
-using enum HyCAN::Hardware::InterfaceType;
+import HyCAN.Interface;
+using HyCAN::Interface;
+using enum HyCAN::InterfaceType;
 
 // Helper function to check if a network interface exists
 bool check_interface_exists(const std::string_view interface_name)
 {
-    errno = 0; // Clear errno before the call
+    errno = 0;
     const unsigned int if_idx = if_nametoindex(interface_name.data());
     // if_nametoindex returns 0 if the interface is not found or an error occurs.
     // If an error occurs, errno is set. If not found, errno might be ENODEV or not set.
@@ -40,23 +40,23 @@ int main()
 
     if (!up_result)
     {
-        std::cerr << "FAIL: set_interface_up<Virtual> for '" << test_interface_name << "' failed." << std::endl;
+        std::cerr << "FAIL: Interface::up for '" << test_interface_name << "' failed." << std::endl;
         std::cerr << "      Error: " << up_result.error() << std::endl;
         test_result_code = EXIT_FAILURE;
     }
     else
     {
-        std::cout << "PASS: set_interface_up<Virtual> for '" << test_interface_name << "' reported success." <<
+        std::cout << "PASS: Interface::up for '" << test_interface_name << "' reported success." <<
             std::endl;
         if (!check_interface_exists(test_interface_name))
         {
             std::cerr << "FAIL: Interface '" << test_interface_name <<
-                "' does NOT exist after set_interface_up reported success." << std::endl;
+                "' does NOT exist after Interface::up reported success." << std::endl;
             test_result_code = EXIT_FAILURE;
         }
         else
         {
-            std::cout << "PASS: Interface '" << test_interface_name << "' confirmed to exist after set_interface_up." <<
+            std::cout << "PASS: Interface '" << test_interface_name << "' confirmed to exist after Interface::up." <<
                 std::endl;
             // Note: To confirm it's truly "UP", one would need to check IFF_UP flag via ioctl(SIOCGIFFLAGS).
             // This test primarily checks creation and the function's return value.
@@ -67,36 +67,36 @@ int main()
     // This test is more meaningful if the interface was successfully brought up or at least attempted.
     if (up_result)
     {
-        // Proceed if the set_interface_up call itself didn't return an error.
+        // Proceed if the Interface::up call itself didn't return an error.
         std::cout << "\nTEST 2: Setting down interface '" << test_interface_name << "'..." << std::endl;
 
         if (auto down_result = interface.down(); !down_result)
         {
-            std::cerr << "FAIL: set_interface_down for '" << test_interface_name << "' failed." << std::endl;
+            std::cerr << "FAIL: Interface::down for '" << test_interface_name << "' failed." << std::endl;
             std::cerr << "      Error: " << down_result.error() << std::endl;
             test_result_code = EXIT_FAILURE;
         }
         else
         {
-            std::cout << "PASS: set_interface_down for '" << test_interface_name << "' reported success." << std::endl;
+            std::cout << "PASS: Interface::down for '" << test_interface_name << "' reported success." << std::endl;
             // Note: The interface will still exist after being set "down" (IFF_UP cleared).
-            // `create_vcan_interface_if_not_exists` creates it, `set_interface_down` only changes flags.
+            // `create_vcan_interface_if_not_exists` creates it, `Interface::down` only changes flags.
             // A RTM_DELLINK operation would be needed to remove it.
             if (check_interface_exists(test_interface_name))
             {
                 std::cout << "INFO: Interface '" << test_interface_name <<
-                    "' still exists (as expected) after set_interface_down." << std::endl;
+                    "' still exists (as expected) after Interface::down." << std::endl;
             }
             else
             {
                 std::cerr << "WARN: Interface '" << test_interface_name <<
-                    "' unexpectedly does not exist after set_interface_down." << std::endl;
+                    "' unexpectedly does not exist after Interface::down." << std::endl;
             }
         }
     }
     else
     {
-        std::cout << "\nINFO: Skipping Test 2 (set_interface_down) because set_interface_up failed to report success."
+        std::cout << "\nINFO: Skipping Test 2 (Interface::down) because Interface::up failed to report success."
             << std::endl;
     }
 
