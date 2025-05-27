@@ -28,8 +28,12 @@ export namespace HyCAN
         Reaper& operator=(const Reaper& other) = delete;
         Reaper& operator=(Reaper&& other) noexcept = delete;
 
+        void start();
+        void stop();
+
     private:
         void reap_process(const stop_token& stop_token);
+        void epoll_fd_add_sock_fd(int sock_fd);
         Socket socket;
         int thread_event_fd{};
         int epoll_fd{};
@@ -53,16 +57,27 @@ export namespace HyCAN
             XTR_LOGL(fatal, s, "Failed to create thread_event_fd file descriptor: {}", strerror(errno));
         }
 
-        epoll_event ev{};
-        ev = {
-            .events = EPOLLIN,
-            .data = {
-                .fd = thread_event_fd
-            }
-        };
-        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, thread_event_fd, &ev) == -1)
+        epoll_fd_add_sock_fd(thread_event_fd);
+        epoll_fd_add_sock_fd(socket.sock_fd);
+    }
+
+    void Reaper::start()
+    {
+        socket.flush();
+        if (!reap_thread.joinable())
         {
-            XTR_LOGL(fatal, s, "Failed to EPOLL_CTL_ADD thread_event_fd: {}", strerror(errno));
+            reap_thread = jthread(&Reaper::reap_process, this);
+        }
+    }
+
+    void Reaper::stop()
+    {
+        if (reap_thread.joinable())
+        {
+            reap_thread.request_stop();
+            constexpr uint64_t one = 1;
+            write(thread_event_fd, &one, sizeof(one));
+            reap_thread.join();
         }
     }
 
@@ -94,6 +109,21 @@ export namespace HyCAN
                     }
                 }
             }
+        }
+    }
+
+    void Reaper::epoll_fd_add_sock_fd(const int sock_fd)
+    {
+        epoll_event ev{};
+        ev = {
+            .events = EPOLLIN,
+            .data = {
+                .fd = sock_fd
+            }
+        };
+        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sock_fd, &ev) == -1)
+        {
+            XTR_LOGL(fatal, s, "Failed to EPOLL_CTL_ADD thread_event_fd: {}", strerror(errno));
         }
     }
 }

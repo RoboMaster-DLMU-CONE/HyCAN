@@ -23,10 +23,11 @@ export namespace HyCAN
         explicit Socket(string_view interface_name);
         Socket() = delete;
         ~Socket();
+        void flush();
+        int sock_fd{};
 
     private:
         string_view interface_name;
-        int sock_fd{};
         sink s;
     };
 
@@ -63,6 +64,26 @@ export namespace HyCAN
     Socket::~Socket()
     {
         close(sock_fd);
+    }
+
+    void Socket::flush()
+    {
+        can_frame frame{};
+        while (true)
+        {
+            if (const ssize_t nbytes = read(sock_fd, &frame, sizeof(can_frame)); nbytes > 0)
+            {
+
+            }
+            else if (nbytes == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
+            {
+                break;
+            }
+            else
+            {
+                XTR_LOGL(fatal, s, "Failed to flush linux buffer: {}", strerror(errno));
+            }
+        }
     }
 }
 

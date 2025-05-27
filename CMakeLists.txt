@@ -15,7 +15,7 @@ target_sources(HyCAN PUBLIC
         FILE_SET CXX_MODULES
         FILES ${HYCAN_SOURCES}
 )
-target_link_libraries(HyCAN PRIVATE xtr::xtr)
+target_link_libraries(HyCAN PUBLIC xtr::xtr)
 
 if (BUILD_HYCAN_EXAMPLE)
     include(HyCANExamples)
