@@ -25,7 +25,9 @@ static bool is_interface_up(const std::string_view& name)
     const int fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0) return false;
     ifreq ifr{};
-    std::strncpy(ifr.ifr_name, std::string(name).c_str(), IFNAMSIZ - 1);
+    const auto name_len = std::min(name.size(), static_cast<size_t>(IFNAMSIZ - 1));
+    std::memcpy(ifr.ifr_name, name.data(), name_len);
+    ifr.ifr_name[name_len] = '\0';
     if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0)
     {
         close(fd);

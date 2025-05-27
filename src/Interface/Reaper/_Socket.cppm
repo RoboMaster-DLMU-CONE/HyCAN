@@ -40,8 +40,9 @@ export namespace HyCAN
             XTR_LOGL(fatal, s, "Failed to create CAN socket");
         }
         ifreq ifr{};
-        std::strncpy(ifr.ifr_name, interface_name.data(), IFNAMSIZ - 1);
-        ifr.ifr_name[IFNAMSIZ - 1] = '\0';
+        const auto name_len = std::min(interface_name.size(), static_cast<size_t>(IFNAMSIZ - 1));
+        std::memcpy(ifr.ifr_name, interface_name.data(), name_len);
+        ifr.ifr_name[name_len] = '\0';
         if (ioctl(sock_fd, SIOCGIFINDEX, &ifr) == -1)
         {
             close(sock_fd);
