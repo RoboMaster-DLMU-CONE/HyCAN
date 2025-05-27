@@ -10,14 +10,24 @@ module;
 #include <net/if.h>
 export module HyCAN.Interface:VCAN;
 
+struct NetlinkRequest
+{
+    nlmsghdr nlh;
+    ifinfomsg ifm;
+    char attrbuf[512]; // Buffer for attributes
+};
+
+constexpr size_t REQ_SIZE = sizeof(NetlinkRequest);
+
 namespace
 {
-    bool rtattr_add_data(nlmsghdr* nlh, size_t buffer_capacity, const int type, const void* data, size_t data_len)
+    bool rtattr_add_data(nlmsghdr* nlh, const int type, const void* data,
+                         const size_t data_len)
     {
         const size_t rta_payload_len = data_len;
         const size_t rta_total_len = RTA_LENGTH(rta_payload_len);
         const size_t rta_aligned_total_len = RTA_ALIGN(rta_total_len);
-        if (NLMSG_ALIGN(nlh->nlmsg_len) + rta_aligned_total_len > buffer_capacity)
+        if (NLMSG_ALIGN(nlh->nlmsg_len) + rta_aligned_total_len > REQ_SIZE)
         {
             return false;
         }
@@ -32,13 +42,13 @@ namespace
         return true;
     }
 
-    rtattr* rtattr_nest_begin(nlmsghdr* nlh, size_t buffer_capacity, int type)
+    rtattr* rtattr_nest_begin(nlmsghdr* nlh, const int type)
     {
         constexpr size_t rta_payload_len = 0;
         constexpr size_t rta_total_len = RTA_LENGTH(rta_payload_len);
         constexpr size_t rta_aligned_total_len = RTA_ALIGN(rta_total_len);
 
-        if (NLMSG_ALIGN(nlh->nlmsg_len) + rta_aligned_total_len > buffer_capacity)
+        if (NLMSG_ALIGN(nlh->nlmsg_len) + rta_aligned_total_len > REQ_SIZE)
         {
             return nullptr;
         }
@@ -84,34 +94,30 @@ namespace HyCAN
                                      interface_name, strerror(errno)));
         }
 
-        struct NetlinkRequest
-        {
-            nlmsghdr nlh;
-            ifinfomsg ifm;
-            char attrbuf[512]; // Buffer for attributes
-        } req{};
+        NetlinkRequest req{};
 
-        req.nlh.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+
+        req.nlh.nlmsg_len = NLMSG_LENGTH(sizeof(ifinfomsg));
         req.nlh.nlmsg_type = RTM_NEWLINK;
         req.nlh.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL | NLM_F_ACK; // Added NLM_F_ACK
         req.nlh.nlmsg_seq = 1; // Sequence number for ACK matching
         req.nlh.nlmsg_pid = static_cast<__u32>(getpid());
         req.ifm.ifi_family = AF_UNSPEC;
 
-        if (!rtattr_add_data(&req.nlh, sizeof(req), IFLA_IFNAME, interface_name.data(), interface_name.length() + 1))
+        if (!rtattr_add_data(&req.nlh, IFLA_IFNAME, interface_name.data(), interface_name.length() + 1))
         {
             close(sock);
             return unexpected(format("Error: Not enough buffer space for IFLA_IFNAME for '{}'", interface_name));
         }
 
-        rtattr* linkinfo = rtattr_nest_begin(&req.nlh, sizeof(req), IFLA_LINKINFO);
+        rtattr* linkinfo = rtattr_nest_begin(&req.nlh, IFLA_LINKINFO);
         if (!linkinfo)
         {
             close(sock);
             return unexpected(format("Error: Not enough buffer space for IFLA_LINKINFO for '{}'", interface_name));
         }
 
-        if (const auto kind = "vcan"; !rtattr_add_data(&req.nlh, sizeof(req), IFLA_INFO_KIND, kind, strlen(kind) + 1))
+        if (const auto kind = "vcan"; !rtattr_add_data(&req.nlh, IFLA_INFO_KIND, kind, strlen(kind) + 1))
         {
             rtattr_nest_end(&req.nlh, linkinfo);
             close(sock);
@@ -128,7 +134,7 @@ namespace HyCAN
         }
 
         // Wait for ACK
-        char recv_buf[NLMSG_ALIGN(NLMSG_HDRLEN) + NLMSG_ALIGN(sizeof(struct nlmsgerr)) + 1024]; // Buffer for ACK
+        char recv_buf[NLMSG_ALIGN(NLMSG_HDRLEN) + NLMSG_ALIGN(sizeof(nlmsgerr)) + 1024]; // Buffer for ACK
         ssize_t len = recv(sock, recv_buf, sizeof(recv_buf), 0);
         if (len < 0)
         {

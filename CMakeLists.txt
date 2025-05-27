@@ -10,7 +10,7 @@ option(BUILD_HYCAN_TEST "Build HyCAN Tests" ON)
 find_package(xtr REQUIRED)
 
 add_library(HyCAN SHARED)
-file(GLOB_RECURSE HYCAN_SOURCES src/*.cxxm)
+file(GLOB_RECURSE HYCAN_SOURCES src/*.cppm)
 target_sources(HyCAN PUBLIC
         FILE_SET CXX_MODULES
         FILES ${HYCAN_SOURCES}
