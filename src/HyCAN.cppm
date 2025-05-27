@@ -2,6 +2,7 @@ module;
 #include <xtr/logger.hpp>
 export module HyCAN;
 import HyCAN.Interface;
+import HyCAN.Interface.Netlink;
 
 export namespace HyCAN
 {
@@ -10,14 +11,9 @@ export namespace HyCAN
         xtr::logger log;
         xtr::sink s = log.get_sink("HyCAN Init");
         XTR_LOGL(info, s, "Hello HyCAN!");
-        auto interface = Interface<Virtual>("vcan0");
-        if (const auto result = interface.up(); !result)
-        {
-            XTR_LOGL(error, s, "Failed to set up interface. Details: {}", result.error());
-        }
-        if (const auto result = interface.down(); !result)
-        {
-            XTR_LOGL(error, s, "Failed to set down interface. Details: {}", result.error());
-        }
+        auto interface = Interface<InterfaceType::Virtual>("vcan0");
+        interface.up();
+        std::this_thread::sleep_for(std::chrono::duration(std::chrono::seconds(1)));
+        interface.down();
     }
 }

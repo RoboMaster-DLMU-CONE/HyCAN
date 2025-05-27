@@ -8,7 +8,7 @@ module;
 #include <sys/socket.h>
 #include <linux/rtnetlink.h>
 #include <net/if.h>
-export module HyCAN.Interface:VCAN;
+export module HyCAN.Interface.Netlink:VCAN;
 
 struct NetlinkRequest
 {

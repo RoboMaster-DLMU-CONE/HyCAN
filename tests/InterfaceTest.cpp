@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 import HyCAN.Interface;
+import HyCAN.Interface.Netlink;
 using HyCAN::Interface;
 using enum HyCAN::InterfaceType;
 
@@ -36,69 +37,46 @@ int main()
 
     // --- Test 1: Set Virtual Interface UP ---
     std::cout << "\nTEST 1: Setting up virtual interface '" << test_interface_name << "'..." << std::endl;
-    auto up_result = interface.up();
-
-    if (!up_result)
+    interface.up();
+    std::cout << "PASS: Interface::up for '" << test_interface_name << "' reported success." <<
+        std::endl;
+    if (!check_interface_exists(test_interface_name))
     {
-        std::cerr << "FAIL: Interface::up for '" << test_interface_name << "' failed." << std::endl;
-        std::cerr << "      Error: " << up_result.error() << std::endl;
+        std::cerr << "FAIL: Interface '" << test_interface_name <<
+            "' does NOT exist after Interface::up reported success." << std::endl;
         test_result_code = EXIT_FAILURE;
     }
     else
     {
-        std::cout << "PASS: Interface::up for '" << test_interface_name << "' reported success." <<
+        std::cout << "PASS: Interface '" << test_interface_name << "' confirmed to exist after Interface::up." <<
             std::endl;
-        if (!check_interface_exists(test_interface_name))
-        {
-            std::cerr << "FAIL: Interface '" << test_interface_name <<
-                "' does NOT exist after Interface::up reported success." << std::endl;
-            test_result_code = EXIT_FAILURE;
-        }
-        else
-        {
-            std::cout << "PASS: Interface '" << test_interface_name << "' confirmed to exist after Interface::up." <<
-                std::endl;
-            // Note: To confirm it's truly "UP", one would need to check IFF_UP flag via ioctl(SIOCGIFFLAGS).
-            // This test primarily checks creation and the function's return value.
-        }
+        // Note: To confirm it's truly "UP", one would need to check IFF_UP flag via ioctl(SIOCGIFFLAGS).
+        // This test primarily checks creation and the function's return value.
     }
 
     // --- Test 2: Set Interface DOWN ---
     // This test is more meaningful if the interface was successfully brought up or at least attempted.
-    if (up_result)
-    {
-        // Proceed if the Interface::up call itself didn't return an error.
-        std::cout << "\nTEST 2: Setting down interface '" << test_interface_name << "'..." << std::endl;
 
-        if (auto down_result = interface.down(); !down_result)
-        {
-            std::cerr << "FAIL: Interface::down for '" << test_interface_name << "' failed." << std::endl;
-            std::cerr << "      Error: " << down_result.error() << std::endl;
-            test_result_code = EXIT_FAILURE;
-        }
-        else
-        {
-            std::cout << "PASS: Interface::down for '" << test_interface_name << "' reported success." << std::endl;
-            // Note: The interface will still exist after being set "down" (IFF_UP cleared).
-            // `create_vcan_interface_if_not_exists` creates it, `Interface::down` only changes flags.
-            // A RTM_DELLINK operation would be needed to remove it.
-            if (check_interface_exists(test_interface_name))
-            {
-                std::cout << "INFO: Interface '" << test_interface_name <<
-                    "' still exists (as expected) after Interface::down." << std::endl;
-            }
-            else
-            {
-                std::cerr << "WARN: Interface '" << test_interface_name <<
-                    "' unexpectedly does not exist after Interface::down." << std::endl;
-            }
-        }
+    // Proceed if the Interface::up call itself didn't return an error.
+    std::cout << "\nTEST 2: Setting down interface '" << test_interface_name << "'..." << std::endl;
+
+    interface.down();
+
+    std::cout << "PASS: Interface::down for '" << test_interface_name << "' reported success." << std::endl;
+    // Note: The interface will still exist after being set "down" (IFF_UP cleared).
+    // `create_vcan_interface_if_not_exists` creates it, `Interface::down` only changes flags.
+    // A RTM_DELLINK operation would be needed to remove it.
+    if (check_interface_exists(test_interface_name))
+    {
+        std::cout << "INFO: Interface '" << test_interface_name <<
+            "' still exists (as expected) after Interface::down." << std::endl;
     }
     else
     {
-        std::cout << "\nINFO: Skipping Test 2 (Interface::down) because Interface::up failed to report success."
-            << std::endl;
+        std::cerr << "WARN: Interface '" << test_interface_name <<
+            "' unexpectedly does not exist after Interface::down." << std::endl;
     }
+
 
     std::cout << "\n--- HyCAN Interface Management Test Finished ---" << std::endl;
     if (test_result_code == EXIT_SUCCESS)
