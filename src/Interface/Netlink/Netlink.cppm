@@ -101,13 +101,17 @@ export namespace HyCAN
         const unsigned int if_index = if_nametoindex(interface_name.data());
         if (if_index == 0)
         {
-            XTR_LOGL(fatal, s, "错误: 找不到要关闭的接口 '{}': {}", interface_name, strerror(errno));
+            XTR_LOGL(fatal, s,
+                     "Error: Cannot find interface '{}' to bring down: {}",
+                     interface_name, strerror(errno));
         }
 
         sock = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
         if (sock < 0)
         {
-            XTR_LOGL(fatal, s, "错误: 无法为接口 '{}' 打开Netlink套接字: {}", interface_name, strerror(errno));
+            XTR_LOGL(fatal, s,
+                     "Error: Cannot open Netlink socket for interface '{}': {}",
+                     interface_name, strerror(errno));
         }
 
         req.nlh = {
@@ -128,7 +132,9 @@ export namespace HyCAN
         {
             const int send_errno = errno;
             close(sock);
-            XTR_LOGL(fatal, s, "错误: 发送Netlink消息以关闭接口 '{}' 失败: {}", interface_name, strerror(send_errno));
+            XTR_LOGL(fatal, s,
+                     "Error: Failed to send Netlink message to bring down interface '{}': {}",
+                     interface_name, strerror(send_errno));
         }
 
         // 等待ACK
@@ -138,7 +144,9 @@ export namespace HyCAN
         {
             const int recv_errno = errno;
             close(sock);
-            XTR_LOGL(fatal, s, "错误: 接收关闭接口 '{}' 的ACK失败: {}", interface_name, strerror(recv_errno));
+            XTR_LOGL(fatal, s,
+                     "Error: Failed to receive ACK for bringing down interface '{}': {}",
+                     interface_name, strerror(recv_errno));
         }
 
         bool ack_success = false;
@@ -159,15 +167,18 @@ export namespace HyCAN
                     break;
                 }
                 close(sock);
-                XTR_LOGL(fatal, s, "错误: Netlink ACK报告关闭接口 '{}' 时出错 {}: {}", -(err->error), interface_name,
-                         strerror(-(err->error)));
+                XTR_LOGL(fatal, s,
+                         "Error: Netlink ACK reported error {} while bringing down interface '{}': {}",
+                         -(err->error), interface_name, strerror(-(err->error)));
             }
         }
         close(sock);
 
         if (!ack_success)
         {
-            XTR_LOGL(fatal, s, "错误: 未能通过Netlink ACK确认接口 '{}' 的关闭。", interface_name);
+            XTR_LOGL(fatal, s,
+                     "Error: Did not receive Netlink ACK confirming interface '{}' down.",
+                     interface_name);
         }
     }
 }
