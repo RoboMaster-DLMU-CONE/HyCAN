@@ -11,7 +11,6 @@
 
 import HyCAN.Interface.Netlink;
 using HyCAN::Netlink;
-using enum HyCAN::InterfaceType;
 
 // helper: returns true if interface name resolves
 static bool interface_exists(const std::string_view& name)
@@ -46,7 +45,7 @@ int main()
     std::cout << "INFO: This test requires CAP_NET_ADMIN or root privileges." << std::endl;
     std::cout << "INFO: Using test interface: " << test_interface_name << std::endl;
 
-    auto netlink = Netlink<Virtual>(test_interface_name);
+    auto netlink = Netlink(test_interface_name);
 
     // --- Test 1: Set Virtual Interface UP ---
     std::cout << "\nTEST 1: Bringing UP virtual interface '" << test_interface_name << "'..." << std::endl;

@@ -4,11 +4,10 @@ import HyCAN.Interface;
 #include <linux/can.h>
 
 using HyCAN::Interface;
-using enum HyCAN::InterfaceType;
 
 int main()
 {
-    Interface<Virtual> interface("vcan0");
+    Interface interface("vcan0");
     std::this_thread::sleep_for(std::chrono::seconds(2));
     interface.up();
     std::this_thread::sleep_for(std::chrono::seconds(10));

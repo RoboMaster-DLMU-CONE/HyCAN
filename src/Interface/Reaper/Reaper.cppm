@@ -63,11 +63,7 @@ export namespace HyCAN
 
     void Reaper::start()
     {
-        for (int i = 0; i < 10; i++)
-        {
-            socket.ensure_connected();
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
+        socket.ensure_connected();
         socket.flush();
         if (!reap_thread.joinable())
         {

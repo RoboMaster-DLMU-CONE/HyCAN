@@ -6,76 +6,17 @@ module;
 #include <format>
 #include <unistd.h>
 #include <sys/socket.h>
-#include <linux/rtnetlink.h>
 #include <net/if.h>
+
+#include <netlink/netlink.h>
+#include <netlink/route/link.h>
 
 #include <xtr/logger.hpp>
 export module HyCAN.Interface.Netlink:VCAN;
 
-struct NetlinkRequest
-{
-    nlmsghdr nlh;
-    ifinfomsg ifm;
-    char attrbuf[512]; // Buffer for attributes
-};
-
-constexpr size_t REQ_SIZE = sizeof(NetlinkRequest);
-
-namespace
-{
-    bool rtattr_add_data(nlmsghdr* nlh, const int type, const void* data,
-                         const size_t data_len)
-    {
-        const size_t rta_payload_len = data_len;
-        const size_t rta_total_len = RTA_LENGTH(rta_payload_len);
-        const size_t rta_aligned_total_len = RTA_ALIGN(rta_total_len);
-        if (NLMSG_ALIGN(nlh->nlmsg_len) + rta_aligned_total_len > REQ_SIZE)
-        {
-            return false;
-        }
-        auto* rta = reinterpret_cast<rtattr*>(reinterpret_cast<char*>(nlh) + NLMSG_ALIGN(nlh->nlmsg_len));
-        rta->rta_type = type;
-        rta->rta_len = rta_total_len;
-        if (rta_payload_len > 0 && data != nullptr)
-        {
-            memcpy(RTA_DATA(rta), data, rta_payload_len);
-        }
-        nlh->nlmsg_len = NLMSG_ALIGN(nlh->nlmsg_len) + rta_aligned_total_len;
-        return true;
-    }
-
-    rtattr* rtattr_nest_begin(nlmsghdr* nlh, const int type)
-    {
-        constexpr size_t rta_payload_len = 0;
-        constexpr size_t rta_total_len = RTA_LENGTH(rta_payload_len);
-        constexpr size_t rta_aligned_total_len = RTA_ALIGN(rta_total_len);
-
-        if (NLMSG_ALIGN(nlh->nlmsg_len) + rta_aligned_total_len > REQ_SIZE)
-        {
-            return nullptr;
-        }
-
-        auto* rta_container = reinterpret_cast<struct rtattr*>(reinterpret_cast<char*>(nlh) + NLMSG_ALIGN(
-            nlh->nlmsg_len));
-        rta_container->rta_type = type;
-        rta_container->rta_len = rta_total_len;
-        nlh->nlmsg_len = NLMSG_ALIGN(nlh->nlmsg_len) + rta_aligned_total_len;
-
-        return rta_container;
-    }
-
-
-    void rtattr_nest_end(nlmsghdr* nlh, rtattr* rta_container_start)
-    {
-        rta_container_start->rta_len = (reinterpret_cast<char*>(nlh) + NLMSG_ALIGN(nlh->nlmsg_len)) - reinterpret_cast<
-            char*>(rta_container_start);
-    }
-}
-
 using std::expected, std::unexpected, std::string, std::string_view, std::format, xtr::sink;
 
-export
-namespace HyCAN
+export namespace HyCAN
 {
     void create_vcan_interface_if_not_exists(const string_view interface_name, sink& s)
     {
@@ -90,113 +31,39 @@ namespace HyCAN
             XTR_LOGL(fatal, s, "Error checking interface '{}' before creation: {}", interface_name, strerror(errno));
         }
 
-        const int sock = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
-        if (sock < 0)
+        nl_sock* sock;
+        rtnl_link* link;
+        if (sock = nl_socket_alloc(); !sock)
         {
-            XTR_LOGL(fatal, s, "Error: Cannot open Netlink socket to create interface '{}': {}", interface_name,
-                     strerror(errno));
+            XTR_LOGL(fatal, s, "Error: Cannot alloc nl_socket.");
         }
 
-        NetlinkRequest req{};
-
-
-        req.nlh.nlmsg_len = NLMSG_LENGTH(sizeof(ifinfomsg));
-        req.nlh.nlmsg_type = RTM_NEWLINK;
-        req.nlh.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL | NLM_F_ACK; // Added NLM_F_ACK
-        req.nlh.nlmsg_seq = 1; // Sequence number for ACK matching
-        req.nlh.nlmsg_pid = static_cast<__u32>(getpid());
-        req.ifm.ifi_family = AF_UNSPEC;
-
-        if (!rtattr_add_data(&req.nlh, IFLA_IFNAME, interface_name.data(), interface_name.length() + 1))
+        if (nl_connect(sock, NETLINK_ROUTE) < 0)
         {
-            close(sock);
-            XTR_LOGL(fatal, s, "Error: Not enough buffer space for IFLA_IFNAME for '{}'", interface_name);
+            nl_socket_free(sock);
+            XTR_LOGL(fatal, s, "Error: Cannot connected to nl_socket.");
         }
 
-        rtattr* linkinfo = rtattr_nest_begin(&req.nlh, IFLA_LINKINFO);
-        if (!linkinfo)
+
+        if (link = rtnl_link_alloc(); !link)
         {
-            close(sock);
-            XTR_LOGL(fatal, s, "Error: Not enough buffer space for IFLA_LINKINFO for '{}'", interface_name);
+            nl_close(sock);
+            nl_socket_free(sock);
+            XTR_LOGL(fatal, s, "Error: Cannot alloc rtnl_link.");
         }
 
-        if (!rtattr_add_data(&req.nlh, IFLA_INFO_KIND, "vcan", 5))
+        rtnl_link_set_name(link, interface_name.data());
+        rtnl_link_set_type(link, "vcan");
+
+        if (const int err = rtnl_link_add(sock, link, NLM_F_CREATE); err < 0)
         {
-            rtattr_nest_end(&req.nlh, linkinfo);
-            close(sock);
-            XTR_LOGL(fatal, s, "Error: Not enough buffer space for IFLA_INFO_KIND for '{}'", interface_name);
+            rtnl_link_put(link);
+            nl_close(sock);
+            nl_socket_free(sock);
+            XTR_LOGL(fatal, s, "Error: Cannot create interface: {}.", nl_geterror(err));
         }
-        rtattr_nest_end(&req.nlh, linkinfo);
-
-        if (send(sock, &req.nlh, req.nlh.nlmsg_len, 0) < 0)
-        {
-            const int send_errno = errno;
-            close(sock);
-            XTR_LOGL(fatal, s, "Error: Failed to send Netlink message to create interface '{}': {}",
-                     interface_name, strerror(send_errno));
-        }
-
-        // Wait for ACK
-        char recv_buf[NLMSG_ALIGN(NLMSG_HDRLEN) + NLMSG_ALIGN(sizeof(nlmsgerr)) + 1024]; // Buffer for ACK
-        ssize_t len = recv(sock, recv_buf, sizeof(recv_buf), 0);
-        if (len < 0)
-        {
-            const int recv_errno = errno;
-            close(sock);
-            XTR_LOGL(fatal, s, "Error: Failed to receive ACK for interface '{}' creation: {}",
-                     interface_name, strerror(recv_errno));
-        }
-
-        bool success = false;
-        for (auto* ack_nlh = reinterpret_cast<nlmsghdr*>(recv_buf); NLMSG_OK(ack_nlh, static_cast<__u32>(len)); ack_nlh
-             = NLMSG_NEXT(ack_nlh, len))
-        {
-            if (ack_nlh->nlmsg_pid != static_cast<__u32>(getpid()) || ack_nlh->nlmsg_seq != req.nlh.nlmsg_seq)
-            {
-                // Not our ACK, or from an old request, skip.
-                continue;
-            }
-
-            if (ack_nlh->nlmsg_type == NLMSG_ERROR)
-            {
-                const nlmsgerr* err = static_cast<nlmsgerr*>(NLMSG_DATA(ack_nlh));
-                if (err->error == 0)
-                {
-                    success = true; // Kernel confirmed success
-                    break;
-                }
-                // If error is EEXIST, it means the interface was created concurrently.
-                // We can treat this as success if if_nametoindex now finds it.
-                if (-(err->error) == EEXIST)
-                {
-                    if (if_nametoindex(interface_name.data()) != 0)
-                    {
-                        success = true;
-                        break;
-                    }
-                }
-                // Other error from kernel
-                close(sock);
-                XTR_LOGL(fatal, s, "Error: Netlink ACK reported error {} for creating interface '{}': {}",
-                         -(err->error), interface_name, strerror(-(err->error)));
-            }
-            // Potentially other message types, we are only interested in NLMSG_ERROR for ACK
-        }
-
-        close(sock);
-
-        if (!success)
-        {
-            // If loop finished and success is still false, means no valid ACK or ACK reported error not handled above.
-            // This could happen if the ACK was malformed or unexpected.
-            // Or if EEXIST was reported but the interface still doesn't exist.
-            // Re-check one last time.
-            if (if_nametoindex(interface_name.data()) != 0)
-            {
-                return; // It exists now, so consider it a success.
-            }
-            XTR_LOGL(fatal, s,
-                     "Error: Failed to confirm creation of interface '{}' via Netlink ACK.", interface_name);
-        }
+        rtnl_link_put(link);
+        nl_close(sock);
+        nl_socket_free(sock);
     }
 }

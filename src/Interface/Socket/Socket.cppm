@@ -32,7 +32,7 @@ export namespace HyCAN
         sink s;
     };
 
-    Socket::Socket(string_view interface_name)
+    Socket::Socket(string_view interface_name): interface_name(interface_name)
     {
         s = interface_logger.get_sink(format("HyCAN Socket_{}", interface_name));
     }
@@ -63,7 +63,7 @@ export namespace HyCAN
         {
             close(sock_fd);
             sock_fd = -1;
-            XTR_LOGL(error, s, "Failed to get CAN interface index: {}", strerror(errno));
+            XTR_LOGL(error, s, "Failed to get CAN interface '{}' index: {}", ifr.ifr_ifrn.ifrn_name, strerror(errno));
             return false;
         }
 

@@ -10,11 +10,10 @@ import HyCAN.Interface.Logger;
 import HyCAN.Interface.Reaper;
 import HyCAN.Interface.Sender;
 export import HyCAN.Interface.Netlink;
-using std::unique_ptr, std::string, std::format, std::exception, std::move;
+using std::unique_ptr, std::string, std::format, std::exception;
 using xtr::sink;
 export namespace HyCAN
 {
-    template <InterfaceType type>
     class Interface
     {
     public:
@@ -27,39 +26,35 @@ export namespace HyCAN
 
     private:
         std::string interface_name;
-        Netlink<type> netlink;
+        Netlink netlink;
         Reaper reaper;
         Sender sender;
         sink s;
     };
 
-    template <InterfaceType type>
-    Interface<type>::Interface(const string& interface_name): interface_name(string(interface_name)),
-                                                              netlink(this->interface_name),
-                                                              reaper(this->interface_name),
-                                                              sender(this->interface_name)
+    Interface::Interface(const string& interface_name): interface_name(string(interface_name)),
+                                                        netlink(this->interface_name),
+                                                        reaper(this->interface_name),
+                                                        sender(this->interface_name)
     {
         s = interface_logger.get_sink(format("HyCAN Interface_{}", this->interface_name));
     }
 
-    template <InterfaceType type>
-    void Interface<type>::up()
+    void Interface::up()
     {
         netlink.up();
         reaper.start();
     }
 
-    template <InterfaceType type>
-    void Interface<type>::down()
+    void Interface::down()
     {
         netlink.down();
         reaper.stop();
     }
 
-    template <InterfaceType type>
     template <CanFrameConvertiable T>
-    void Interface<type>::send(T frame)
+    void Interface::send(T frame)
     {
-        sender.send(move(frame));
+        sender.send(std::move(frame));
     }
 }
