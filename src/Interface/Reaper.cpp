@@ -42,7 +42,7 @@ namespace HyCAN
         {
             reap_thread.request_stop();
             constexpr uint64_t one = 1;
-            write(thread_event_fd, &one, sizeof(one));
+            [[maybe_unused]] const ssize_t _ = write(thread_event_fd, &one, sizeof(one));
             reap_thread.join();
         }
     }
