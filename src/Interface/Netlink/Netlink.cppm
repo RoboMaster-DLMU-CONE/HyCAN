@@ -5,6 +5,7 @@ module;
 #include <linux/rtnetlink.h>
 #include <xtr/logger.hpp>
 export module HyCAN.Interface.Netlink;
+export import HyCAN.Interface.InterfaceType;
 import HyCAN.Interface.Logger;
 import :VCAN;
 
@@ -13,11 +14,7 @@ using xtr::logger, xtr::sink;
 
 export namespace HyCAN
 {
-    enum class InterfaceType
-    {
-        Virtual,
-        Physics
-    };
+    using enum InterfaceType;
 
     template <InterfaceType type>
     class Netlink

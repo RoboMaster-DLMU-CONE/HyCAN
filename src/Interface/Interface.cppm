@@ -1,15 +1,16 @@
 module;
 #include <memory>
 #include <string>
-#include <string_view>
 #include <format>
 
 #include <xtr/logger.hpp>
 export module HyCAN.Interface;
+import HyCAN.Interface.CanFrameConvertible;
 import HyCAN.Interface.Logger;
 import HyCAN.Interface.Reaper;
+import HyCAN.Interface.Sender;
 export import HyCAN.Interface.Netlink;
-using std::unique_ptr, std::string, std::string_view, std::format, std::exception;
+using std::unique_ptr, std::string, std::format, std::exception, std::move;
 using xtr::sink;
 export namespace HyCAN
 {
@@ -17,23 +18,28 @@ export namespace HyCAN
     class Interface
     {
     public:
-        explicit Interface(std::string_view interface_name);
+        explicit Interface(const string& interface_name);
         Interface() = delete;
         void up();
         void down();
+        template <CanFrameConvertiable T>
+        void send(T frame);
 
     private:
-        std::string_view interface_name;
+        std::string interface_name;
         Netlink<type> netlink;
         Reaper reaper;
+        Sender sender;
         sink s;
     };
 
     template <InterfaceType type>
-    Interface<type>::Interface(const std::string_view interface_name): interface_name(interface_name),
-                                                                       netlink(interface_name), reaper(interface_name)
+    Interface<type>::Interface(const string& interface_name): interface_name(string(interface_name)),
+                                                              netlink(this->interface_name),
+                                                              reaper(this->interface_name),
+                                                              sender(this->interface_name)
     {
-        s = interface_logger.get_sink(format("HyCAN Interface_{}", interface_name));
+        s = interface_logger.get_sink(format("HyCAN Interface_{}", this->interface_name));
     }
 
     template <InterfaceType type>
@@ -48,5 +54,12 @@ export namespace HyCAN
     {
         netlink.down();
         reaper.stop();
+    }
+
+    template <InterfaceType type>
+    template <CanFrameConvertiable T>
+    void Interface<type>::send(T frame)
+    {
+        sender.send(move(frame));
     }
 }

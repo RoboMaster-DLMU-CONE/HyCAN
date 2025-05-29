@@ -9,7 +9,7 @@ module;
 
 export module HyCAN.Interface.Reaper;
 import HyCAN.Interface.Logger;
-import :Socket;
+import HyCAN.Interface.Socket;
 
 using std::string_view, std::format, std::jthread, std::stop_token;
 using xtr::sink, xtr::logger;

@@ -9,7 +9,7 @@ module;
 #include <linux/can.h>
 #include <net/if.h>
 
-export module HyCAN.Interface.Reaper:Socket;
+export module HyCAN.Interface.Socket;
 import HyCAN.Interface.Logger;
 
 using std::string_view;
