@@ -11,10 +11,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 19
-          sudo apt install -y clang-tools-19 libc++-dev libc++abi-dev linux-modules-extra-$(uname -r)
+          sudo apt install -y linux-modules-extra-$(uname -r)
 
       - name: Load CAN Module
         run: |
@@ -29,14 +26,10 @@ jobs:
 
       - name: Install Conan dependencies
         run: |
-          export CC=clang-19
-          export CXX=clang++-19
-          conan install . --build=missing -s compiler=clang -s compiler.cppstd=gnu23 -s compiler.libcxx=libstdc++11 -s compiler.version=19 -s:b compiler=clang -s:b compiler.cppstd=gnu23 -s:b compiler.libcxx=libstdc++11 -s:b compiler.version=19
+          conan install . --build=missing -s compiler=clang -s compiler.cppstd=gnu23 -s:b compiler.cppstd=gnu23
 
       - name: Build Project
         run: |
-          export CC=clang-19
-          export CXX=clang++-19
           cmake --preset conan-release -G Ninja -DBUILD_HYCAN_TEST=ON
           cmake --build --preset conan-release
 
