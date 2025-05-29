@@ -26,7 +26,7 @@ jobs:
 
       - name: Install Conan dependencies
         run: |
-          conan profile detect
+          conan profile detect --force
           DEFAULT_PROFILE_PATH=$(conan profile path default)
           if [ -f "$DEFAULT_PROFILE_PATH" ]; then
             sed -i "s|^compiler.cppstd=.*|compiler.cppstd=gnu23|" "$DEFAULT_PROFILE_PATH"
