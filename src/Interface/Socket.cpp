@@ -1,37 +1,8 @@
-module;
-#include <string_view>
-#include <format>
-#include <xtr/logger.hpp>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <linux/can.h>
-#include <net/if.h>
+#include "Interface/Socket.hpp"
+#include "Interface/Logger.hpp"
 
-export module HyCAN.Interface.Socket;
-import HyCAN.Interface.Logger;
-
-using std::string_view;
-using xtr::sink;
-
-export namespace HyCAN
+namespace HyCAN
 {
-    class Socket
-    {
-    public:
-        explicit Socket(string_view interface_name);
-        Socket() = delete;
-        ~Socket();
-        bool ensure_connected();
-        void flush();
-        int sock_fd{};
-
-    private:
-        string_view interface_name;
-        sink s;
-    };
-
     Socket::Socket(string_view interface_name): interface_name(interface_name)
     {
         s = interface_logger.get_sink(format("HyCAN Socket_{}", interface_name));
@@ -109,4 +80,3 @@ export namespace HyCAN
         }
     }
 }
-

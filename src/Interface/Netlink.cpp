@@ -1,36 +1,14 @@
-module;
-#include <unistd.h>
-#include <sys/socket.h>
+#include "Interface/Netlink.hpp"
+#include "Interface/VCAN.hpp"
+#include "Interface/Logger.hpp"
+
 #include <net/if.h>
+
 #include <netlink/netlink.h>
 #include <netlink/route/link.h>
-#include <netlink/route/addr.h>
-#include <xtr/logger.hpp>
 
-export module HyCAN.Interface.Netlink;
-import HyCAN.Interface.Logger;
-import :VCAN;
-
-using std::format, std::string_view, std::string;
-using xtr::logger, xtr::sink;
-
-export namespace HyCAN
+namespace HyCAN
 {
-    class Netlink
-    {
-    public:
-        explicit Netlink(string_view interface_name);
-        Netlink() = delete;
-        void up();
-        void down();
-
-    private:
-        template <bool state>
-        void set_sock();
-        string_view interface_name;
-        sink s;
-    };
-
     Netlink::Netlink(string_view interface_name): interface_name(interface_name)
     {
         s = interface_logger.get_sink(format("HyCAN Netlink_{}", interface_name));
@@ -103,4 +81,7 @@ export namespace HyCAN
         nl_close(sock);
         nl_socket_free(sock);
     }
+
+    template void Netlink::set_sock<true>();
+    template void Netlink::set_sock<false>();
 }

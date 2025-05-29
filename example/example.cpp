@@ -1,7 +1,8 @@
-import HyCAN.Interface;
 #include <thread>
 #include <chrono>
 #include <linux/can.h>
+
+#include "Interface/Interface.hpp"
 
 using HyCAN::Interface;
 

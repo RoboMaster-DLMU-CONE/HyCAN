@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 
-import HyCAN.Interface.Netlink;
+#include "Interface/Netlink.hpp"
 using HyCAN::Netlink;
 
 // helper: returns true if interface name resolves

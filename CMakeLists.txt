@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.31)
+cmake_minimum_required(VERSION 3.27)
 
 project(HyCAN)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -10,12 +10,10 @@ option(BUILD_HYCAN_TEST "Build HyCAN Tests" ON)
 find_package(xtr REQUIRED)
 find_package(libnl REQUIRED)
 
+file(GLOB_RECURSE HYCAN_SOURCES src/*.cpp)
 add_library(HyCAN SHARED)
-file(GLOB_RECURSE HYCAN_SOURCES src/*.cppm)
-target_sources(HyCAN PUBLIC
-        FILE_SET CXX_MODULES
-        FILES ${HYCAN_SOURCES}
-)
+target_sources(HyCAN PRIVATE ${HYCAN_SOURCES})
+target_include_directories(HyCAN PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(HyCAN PUBLIC xtr::xtr libnl::libnl)
 
 if (BUILD_HYCAN_EXAMPLE)

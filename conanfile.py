@@ -7,14 +7,14 @@ from conan.tools.files import copy
 
 class HyCANRecipe(ConanFile):
     name = "HyCAN"
-    version = "0.1.0"  # Set your library's version
-    license = "BSD-3-Clause"  # Specify your project's license
-    author = "MoonFeather moonfeather120@outlook.com"  # Your name and email
-    url = "https://github.com/RoboMaster-DLMU-CONE/HyCAN"  # URL to your project
+    version = "0.2.0"
+    license = "BSD-3-Clause"
+    author = "MoonFeather moonfeather120@outlook.com"
+    url = "https://github.com/RoboMaster-DLMU-CONE/HyCAN"
     description = "Modern high-performance Linux C++ CAN communication protocol library"
-    topics = ("canbus", "linux", "c++23", "network")
+    topics = ("canbus", "linux", "c++20", "network")
     settings = "os", "compiler", "build_type", "arch"
-    exports_sources = "CMakeLists.txt", "src/*", "example/*", "README.md"
+    exports_sources = "CMakeLists.txt", "include/*", "example/*", "README.md"
 
     def layout(self):
         cmake_layout(self)
