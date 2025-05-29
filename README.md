@@ -23,15 +23,6 @@ sudo modprobe vcan
 sudo modprobe can
 ```
 
-- 你可以使用`sudo`运行编译的应用程序，或者，**更推荐的**，使用PAM为你的用户添加网络接口权限。编辑
-  `/etc/security/capability.conf`，添加一行：
-
-```shell
-cap_net_admin your_username
-```
-
-权限在重启后生效。
-
 ### Conan安装依赖
 
 ```shell
@@ -47,3 +38,5 @@ conan install . --build=missing -s build_type=Release
 ## Credit
 
 - [xtr日志库](https://github.com/choll/xtr)
+- [libnl](https://github.com/thom311/libnl)
+- [mlib](https://github.com/P-p-H-d/mlib)

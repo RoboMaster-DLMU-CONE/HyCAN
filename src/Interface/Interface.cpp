@@ -22,4 +22,14 @@ namespace HyCAN
         netlink.down();
         reaper.stop();
     }
+
+    expected<void, string> Interface::registerCallback(const size_t can_id, const function<void(can_frame&&)>& func)
+    {
+        auto result = reaper.registerFunc(can_id, func);
+        if (!result)
+        {
+            XTR_LOGL(error, s, "{}", result.error());
+        }
+        return result;
+    }
 }

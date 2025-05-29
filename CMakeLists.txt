@@ -13,7 +13,9 @@ find_package(libnl REQUIRED)
 file(GLOB_RECURSE HYCAN_SOURCES src/*.cpp)
 add_library(HyCAN SHARED)
 target_sources(HyCAN PRIVATE ${HYCAN_SOURCES})
-target_include_directories(HyCAN PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(HyCAN PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 target_link_libraries(HyCAN PUBLIC xtr::xtr libnl::libnl)
 
 if (BUILD_HYCAN_EXAMPLE)

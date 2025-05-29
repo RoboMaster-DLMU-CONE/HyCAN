@@ -47,6 +47,16 @@ namespace HyCAN
         }
     }
 
+    expected<void, string> Reaper::registerFunc(const size_t can_id, function<void(can_frame&&)> func)
+    {
+        if (reap_thread.joinable())
+        {
+            return unexpected("Reaper thread is running.");
+        }
+        funcs[can_id] = func;
+        return {};
+    }
+
     void Reaper::reap_process(const stop_token& stop_token)
     {
         epoll_event events[MAX_EPOLL_EVENT]{};
@@ -71,7 +81,8 @@ namespace HyCAN
                     if (const int fd = events[i].data.fd; read(fd, &frame, sizeof
                                                                frame) > 0)
                     {
-                        XTR_LOGL(info, s, "Message from {}: ", interface_name);
+                        XTR_LOGL(debug, s, "Message from {}: ", interface_name);
+                        funcs[frame.can_id](std::move(frame));
                     }
                 }
             }
