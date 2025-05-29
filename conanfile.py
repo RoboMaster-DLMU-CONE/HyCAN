@@ -21,11 +21,12 @@ class HyCANRecipe(ConanFile):
 
     def requirements(self):
         self.requires("xtr/2.1.2")
+        self.requires("libnl/3.9.0")
 
     def generate(self):
         deps = CMakeDeps(self)
         deps.generate()
-        
+
         tc = CMakeToolchain(self)
         tc.variables["CMAKE_CXX_STANDARD"] = "23"
         tc.generate()

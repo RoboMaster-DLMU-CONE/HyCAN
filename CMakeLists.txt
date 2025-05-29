@@ -8,6 +8,7 @@ option(BUILD_HYCAN_EXAMPLE "Build HyCAN Examples" ON)
 option(BUILD_HYCAN_TEST "Build HyCAN Tests" ON)
 
 find_package(xtr REQUIRED)
+find_package(libnl REQUIRED)
 
 add_library(HyCAN SHARED)
 file(GLOB_RECURSE HYCAN_SOURCES src/*.cppm)
@@ -15,7 +16,7 @@ target_sources(HyCAN PUBLIC
         FILE_SET CXX_MODULES
         FILES ${HYCAN_SOURCES}
 )
-target_link_libraries(HyCAN PUBLIC xtr::xtr)
+target_link_libraries(HyCAN PUBLIC xtr::xtr libnl::libnl)
 
 if (BUILD_HYCAN_EXAMPLE)
     include(HyCANExamples)

@@ -4,6 +4,9 @@ module;
 #include <net/if.h>
 #include <linux/rtnetlink.h>
 #include <xtr/logger.hpp>
+#include <netlink/netlink.h>
+#include <netlink/route/link.h>
+#include <netlink/route/link/can.h>
 export module HyCAN.Interface.Netlink;
 export import HyCAN.Interface.InterfaceType;
 import HyCAN.Interface.Logger;
@@ -69,8 +72,8 @@ export namespace HyCAN
         req.nlh = {
             .nlmsg_len = NLMSG_LENGTH(sizeof(ifinfomsg)),
             .nlmsg_type = RTM_NEWLINK,
-            .nlmsg_flags = NLM_F_REQUEST,
-            .nlmsg_seq = 0,
+            .nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK,
+            .nlmsg_seq = static_cast<__u32>(getpid()),
             .nlmsg_pid = static_cast<__u32>(getpid()),
         };
         req.ifm = {
@@ -83,11 +86,37 @@ export namespace HyCAN
         if (send(sock, &req, req.nlh.nlmsg_len, 0) < 0)
         {
             close(sock);
-            XTR_LOGL(fatal, s, "Error: Failed to send Netlink message for interface '{}': {}",
-                     interface_name,
-                     strerror(errno));
+            XTR_LOGL(fatal, s, "Failed to send RTM_NEWLINK: {}", strerror(errno));
+        }
+        char buffer[4096];
+        ssize_t len = recv(sock, buffer, sizeof(buffer), 0);
+        if (len < 0)
+        {
+            close(sock);
+            XTR_LOGL(fatal, s, "Failed to receive ACK: {}", strerror(errno));
+        }
+
+        bool ok = false;
+        for (auto* nh = reinterpret_cast<nlmsghdr*>(buffer); NLMSG_OK(nh, len);
+             nh = NLMSG_NEXT(nh, len))
+        {
+            if (nh->nlmsg_type == NLMSG_ERROR)
+            {
+                const auto* err = reinterpret_cast<nlmsgerr*>(NLMSG_DATA(nh));
+                if (err->error == 0)
+                {
+                    ok = true;
+                    break;
+                }
+                close(sock);
+                XTR_LOGL(fatal, s, "Kernel error on RTM_NEWLINK: {}", strerror(-err->error));
+            }
         }
         close(sock);
+        if (!ok)
+        {
+            XTR_LOGL(fatal, s, "Did not receive positive ACK for interface.");
+        }
     }
 
     template <InterfaceType type>

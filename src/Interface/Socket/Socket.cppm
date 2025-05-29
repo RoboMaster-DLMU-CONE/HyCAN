@@ -23,6 +23,7 @@ export namespace HyCAN
         explicit Socket(string_view interface_name);
         Socket() = delete;
         ~Socket();
+        bool ensure_connected();
         void flush();
         int sock_fd{};
 
@@ -34,10 +35,25 @@ export namespace HyCAN
     Socket::Socket(string_view interface_name)
     {
         s = interface_logger.get_sink(format("HyCAN Socket_{}", interface_name));
+    }
+
+    Socket::~Socket()
+    {
+        close(sock_fd);
+    }
+
+    bool Socket::ensure_connected()
+    {
+        if (sock_fd > 0)
+        {
+            close(sock_fd);
+            sock_fd = -1;
+        }
         sock_fd = socket(PF_CAN, SOCK_RAW, CAN_RAW);
         if (sock_fd == -1)
         {
-            XTR_LOGL(fatal, s, "Failed to create CAN socket");
+            XTR_LOGL(error, s, "Failed to create CAN socket: {}", strerror(errno));
+            return false;
         }
         ifreq ifr{};
         const auto name_len = std::min(interface_name.size(), static_cast<size_t>(IFNAMSIZ - 1));
@@ -46,29 +62,36 @@ export namespace HyCAN
         if (ioctl(sock_fd, SIOCGIFINDEX, &ifr) == -1)
         {
             close(sock_fd);
-            XTR_LOGL(fatal, s, "Failed to get CAN interface index");
+            sock_fd = -1;
+            XTR_LOGL(error, s, "Failed to get CAN interface index: {}", strerror(errno));
+            return false;
         }
 
         sockaddr_can addr = {
             .can_family = AF_CAN,
             .can_ifindex = ifr.ifr_ifindex,
         };
+
         if (bind(sock_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == -1)
         {
             close(sock_fd);
-            XTR_LOGL(fatal, s, "Failed to bind CAN socket");
+            sock_fd = -1;
+            XTR_LOGL(error, s, "Failed to bind CAN socket: {}", strerror(errno));
+            return false;
         }
+
         const int flags = fcntl(sock_fd, F_GETFL, 0);
         fcntl(sock_fd, F_SETFL, flags | O_NONBLOCK);
-    }
-
-    Socket::~Socket()
-    {
-        close(sock_fd);
+        return true;
     }
 
     void Socket::flush()
     {
+        if (sock_fd < 0)
+        {
+            XTR_LOGL(error, s, "Cannot flush with invalid socket descriptor");
+            return;
+        }
         can_frame frame{};
         while (true)
         {
@@ -81,7 +104,7 @@ export namespace HyCAN
             }
             else
             {
-                XTR_LOGL(fatal, s, "Failed to flush linux buffer: {}", strerror(errno));
+                XTR_LOGL(error, s, "Failed to flush linux buffer: {}", strerror(errno));
             }
         }
     }

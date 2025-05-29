@@ -35,6 +35,7 @@ export namespace HyCAN
     template <CanFrameConvertiable T = can_frame>
     void Sender::send(T frame)
     {
+        socket.ensure_connected();
         ssize_t result;
         if constexpr (std::is_same<T, can_frame>())
         {
