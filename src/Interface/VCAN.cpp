@@ -1,22 +1,10 @@
-module;
-#include <cstring>
-#include <expected>
-#include <string>
-#include <string_view>
-#include <format>
-#include <unistd.h>
-#include <sys/socket.h>
+#include "Interface/VCAN.hpp"
 #include <net/if.h>
 
 #include <netlink/netlink.h>
 #include <netlink/route/link.h>
 
-#include <xtr/logger.hpp>
-export module HyCAN.Interface.Netlink:VCAN;
-
-using std::expected, std::unexpected, std::string, std::string_view, std::format, xtr::sink;
-
-export namespace HyCAN
+namespace HyCAN
 {
     void create_vcan_interface_if_not_exists(const string_view interface_name, sink& s)
     {

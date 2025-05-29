@@ -1,9 +1,10 @@
-module;
+#ifndef CANFRAMECONVERTIBLE_HPP
+#define CANFRAMECONVERTIBLE_HPP
+
 #include <concepts>
 #include <linux/can.h>
-export module HyCAN.Interface.CanFrameConvertible;
 
-export namespace HyCAN
+namespace HyCAN
 {
     template <typename T>
     concept CanFrameConvertiable = requires(T a)
@@ -12,3 +13,5 @@ export namespace HyCAN
         { static_cast<T>(can_frame()) } -> std::same_as<T>;
     };
 }
+
+#endif //CANFRAMECONVERTIBLE_HPP

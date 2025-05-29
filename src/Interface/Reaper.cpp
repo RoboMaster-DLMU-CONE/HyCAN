@@ -1,47 +1,12 @@
-module;
-#include <thread>
-#include <vector>
-#include <linux/can.h>
+#include "Interface/Reaper.hpp"
+#include "Interface/Logger.hpp"
+
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
+#include <linux/can.h>
 
-#include <xtr/logger.hpp>
-
-export module HyCAN.Interface.Reaper;
-import HyCAN.Interface.Logger;
-import HyCAN.Interface.Socket;
-
-using std::string_view, std::format, std::jthread, std::stop_token;
-using xtr::sink, xtr::logger;
-
-static constexpr size_t MAX_EPOLL_EVENT = 2048;
-
-export namespace HyCAN
+namespace HyCAN
 {
-    class Reaper
-    {
-    public:
-        explicit Reaper(string_view interface_name);
-        Reaper() = delete;
-        Reaper(const Reaper& other) = delete;
-        Reaper(Reaper&& other) = delete;
-        Reaper& operator=(const Reaper& other) = delete;
-        Reaper& operator=(Reaper&& other) noexcept = delete;
-
-        void start();
-        void stop();
-
-    private:
-        void reap_process(const stop_token& stop_token);
-        void epoll_fd_add_sock_fd(int sock_fd);
-        Socket socket;
-        int thread_event_fd{};
-        int epoll_fd{};
-        sink s;
-        string_view interface_name;
-        jthread reap_thread;
-    };
-
     Reaper::Reaper(const string_view interface_name): socket(interface_name), interface_name(interface_name)
     {
         s = interface_logger.get_sink(format("ReaperThread_{}", interface_name));
