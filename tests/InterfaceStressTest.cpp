@@ -14,8 +14,8 @@
 #include "Interface/Logger.hpp"    // For sink, if direct logging is needed
 
 // --- Test Configuration ---
-constexpr int NUM_INTERFACES = 10;
-constexpr int NUM_SENDER_THREADS = 10;
+constexpr int NUM_INTERFACES = 15;
+constexpr int NUM_SENDER_THREADS = 15;
 constexpr int TEST_DURATION_SECONDS = 10; // How long the sending phase lasts
 constexpr unsigned int SEND_INTERVAL_MICROSECONDS = 100; // Delay between sends per thread (0 for max effort)
 constexpr canid_t BASE_CAN_ID = 0x200; // Starting CAN ID for interfaces
@@ -66,9 +66,11 @@ void sender_worker_fn(
     int interface_rr_index = thread_id % NUM_INTERFACES; // Start round-robin from different points
 
     std::array<std::unique_ptr<HyCAN::Sender>, NUM_INTERFACES> senders;
+    std::array<std::string, NUM_INTERFACES> names;
     for (int i = 0; i < NUM_INTERFACES; i++)
     {
-        senders[i] = std::make_unique<HyCAN::Sender>(HyCAN::Sender(string(format("vcan_stress_{}", i))));
+        names[i] = format("vcan_stress_{}", i);
+        senders[i] = std::make_unique<HyCAN::Sender>(HyCAN::Sender(names[i]));
     }
 
     while (!g_stop_sending_flag.load(std::memory_order_acquire))

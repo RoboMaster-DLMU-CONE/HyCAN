@@ -139,8 +139,11 @@ namespace HyCAN
                     if (const int fd = events[i].data.fd; read(fd, &frame, sizeof
                                                                frame) > 0)
                     {
-                        XTR_LOGL(debug, s, "Message from {}: ", interface_name);
-                        funcs[frame.can_id](std::move(frame));
+                        XTR_LOGL(debug, s, "Message from {}, CAN ID: {}", interface_name, frame.can_id);
+                        if (funcs[frame.can_id])
+                        {
+                            funcs[frame.can_id](std::move(frame));
+                        }
                     }
                 }
             }
