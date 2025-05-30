@@ -76,11 +76,11 @@ namespace HyCAN
         {
             if constexpr (state == 0)
             {
-                XTR_LOGL(fatal, s, "Failed to bring up interface {}: {}", interface_name, nl_geterror(err));
+                XTR_LOGL(fatal, s, "Failed to bring down interface {}: {}", interface_name, nl_geterror(err));
             }
             else
             {
-                XTR_LOGL(fatal, s, "Failed to bring down interface {}: {}", interface_name, nl_geterror(err));
+                XTR_LOGL(fatal, s, "Failed to bring up interface {}: {}", interface_name, nl_geterror(err));
             }
         }
         rtnl_link_put(link);
