@@ -28,14 +28,8 @@ jobs:
         run: |
           conan profile detect --force
           DEFAULT_PROFILE_PATH=$(conan profile path default)
-          if [ -f "$DEFAULT_PROFILE_PATH" ]; then
-            sed -i "s|^compiler.cppstd=.*|compiler.cppstd=gnu23|" "$DEFAULT_PROFILE_PATH"
-            echo "Updated compiler.cppstd to gnu23 in $DEFAULT_PROFILE_PATH"
-            echo "You can verify with: conan profile show default | grep cppstd"
-          else
-            echo "Error: Default profile path not found at $DEFAULT_PROFILE_PATH"
-          fi
-          conan install . --build=missing
+          sed -i "s|^compiler.cppstd=.*|compiler.cppstd=gnu23|" "$DEFAULT_PROFILE_PATH"
+          conan install . --output-folder=build/Release -s build_type=Release --build=missing
       - name: Build Project
         run: |
           cmake --preset conan-release -G Ninja -DBUILD_HYCAN_TEST=ON -DTEST_HYCAN_LATENCY=ON
