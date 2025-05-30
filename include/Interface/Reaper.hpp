@@ -6,6 +6,8 @@
 #include <expected>
 #include <string>
 
+#include <linux/can.h>
+
 #include <xtr/logger.hpp>
 
 #include "Socket.hpp"

@@ -1,6 +1,13 @@
 #include "Interface/Socket.hpp"
 #include "Interface/Logger.hpp"
 
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <linux/can.h>
+#include <net/if.h>
+
 namespace HyCAN
 {
     Socket::Socket(string_view interface_name): interface_name(interface_name)

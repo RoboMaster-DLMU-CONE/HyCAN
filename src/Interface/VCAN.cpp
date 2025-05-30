@@ -8,16 +8,18 @@ namespace HyCAN
 {
     void create_vcan_interface_if_not_exists(const string_view interface_name, sink& s)
     {
-        XTR_LOGL(info, s, "Creating VCAN for {}", interface_name);
         if (if_nametoindex(interface_name.data()) != 0)
         {
-            XTR_LOGL(info, s, "{} already exists.", interface_name);
+            XTR_LOGL(debug, s, "{} already exists.", interface_name);
             return; // Already exists
         }
         if (errno != ENODEV) // if_nametoindex failed for a reason other than "No such device"
         {
-            XTR_LOGL(fatal, s, "Error checking interface '{}' before creation: {}", interface_name, strerror(errno));
+            XTR_LOGL(error, s, "Error checking interface '{}' before creation: {}", interface_name, strerror(errno));
+            return;
         }
+
+        XTR_LOGL(info, s, "{} not exist, creating VCAN for it", interface_name);
 
         nl_sock* sock;
         rtnl_link* link;

@@ -31,7 +31,7 @@ conan install . --build=missing -s build_type=Release
 
 ## Todo
 
-- [ ] 更多测试
+- [ ] 更多示例和测试
 - [ ] 封装常用功能的`Device`类
 - [ ] 封装常用功能的`Message`类
 

@@ -2,14 +2,7 @@
 #define HYCAN_SOCKET_HPP
 
 #include <string_view>
-#include <format>
 #include <xtr/logger.hpp>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <linux/can.h>
-#include <net/if.h>
 
 using std::string_view;
 using xtr::sink;
