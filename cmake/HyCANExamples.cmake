@@ -1,2 +1,2 @@
-add_executable(HyCAN_Example ${PROJECT_SOURCE_DIR}/example/example.cpp)
-target_link_libraries(HyCAN_Example PRIVATE HyCAN)
+add_executable(HyCAN_Example_SendCallback ${PROJECT_SOURCE_DIR}/example/send&callback.cpp)
+target_link_libraries(HyCAN_Example_SendCallback PRIVATE HyCAN)

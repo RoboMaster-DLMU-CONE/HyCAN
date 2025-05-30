@@ -35,7 +35,7 @@ namespace HyCAN
         void start();
         void stop();
 
-        expected<void, string> registerFunc(size_t can_id, function<void(can_frame&&)> func);
+        expected<void, string> registerFunc(size_t can_id, function<void(can_frame&&)> func) noexcept;
 
     private:
         void reap_process(const stop_token& stop_token);

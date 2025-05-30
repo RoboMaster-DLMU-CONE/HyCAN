@@ -10,7 +10,8 @@
 
 inline void lock_memory(sink& s)
 {
-    if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0)
+    {
         XTR_LOGL(error, s, "Failed to lock memory: {}", strerror(errno));
     }
 }
@@ -19,7 +20,8 @@ inline void make_real_time(sink& s)
 {
     sched_param param{};
     param.sched_priority = 80;
-    if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &param) != 0) {
+    if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &param) != 0)
+    {
         XTR_LOGL(error, s, "Failed to make thread real time: {}", strerror(errno));
     }
 }
@@ -92,7 +94,7 @@ namespace HyCAN
         }
     }
 
-    expected<void, string> Reaper::registerFunc(const size_t can_id, function<void(can_frame&&)> func)
+    expected<void, string> Reaper::registerFunc(const size_t can_id, function<void(can_frame&&)> func) noexcept
     {
         if (reap_thread.joinable())
         {
@@ -104,7 +106,9 @@ namespace HyCAN
 
     void Reaper::reap_process(const stop_token& stop_token)
     {
-        lock_memory(s); make_real_time(s); affinize_cpu(cpu_core, s);
+        lock_memory(s);
+        make_real_time(s);
+        affinize_cpu(cpu_core, s);
         epoll_event events[MAX_EPOLL_EVENT]{};
         while (true)
         {

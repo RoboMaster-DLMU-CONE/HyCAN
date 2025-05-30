@@ -23,6 +23,7 @@ if (BUILD_HYCAN_EXAMPLE)
 endif ()
 
 if (BUILD_HYCAN_TEST)
+    target_compile_definitions(HyCAN PRIVATE HYCAN_TEST_FEATURE)
     enable_testing()
     include(HyCANTests)
 endif ()
