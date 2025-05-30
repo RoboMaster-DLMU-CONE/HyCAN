@@ -96,6 +96,14 @@ namespace HyCAN
 
     expected<void, string> Reaper::registerFunc(const size_t can_id, function<void(can_frame&&)> func) noexcept
     {
+        if (can_id >= 2048)
+        {
+            return unexpected(format("CAN ID {} exceeds maximum limit of 2047", can_id));
+        }
+        if (!func)
+        {
+            return unexpected(format("Provided callback function for CAN ID {} is empty", can_id));
+        }
         if (reap_thread.joinable())
         {
             return unexpected("Reaper thread is running.");

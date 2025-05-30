@@ -13,6 +13,7 @@ namespace HyCAN
     Socket::Socket(string_view interface_name): interface_name(interface_name)
     {
         s = interface_logger.get_sink(format("HyCAN Socket_{}", interface_name));
+        XTR_LOGL(info, s, "Creating socket for {}", interface_name);
     }
 
     Socket::~Socket()
