@@ -7,7 +7,7 @@ from conan.tools.files import copy
 
 class HyCANRecipe(ConanFile):
     name = "HyCAN"
-    version = "0.2.0"
+    version = "0.3.0"
     license = "BSD-3-Clause"
     author = "MoonFeather moonfeather120@outlook.com"
     url = "https://github.com/RoboMaster-DLMU-CONE/HyCAN"

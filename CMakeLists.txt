@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.27)
 
-project(HyCAN)
+project(HyCAN VERSION 0.3.0)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(CMAKE_CXX_STANDARD 23)
@@ -15,7 +15,8 @@ file(GLOB_RECURSE HYCAN_SOURCES src/*.cpp)
 add_library(HyCAN SHARED)
 target_sources(HyCAN PRIVATE ${HYCAN_SOURCES})
 target_include_directories(HyCAN PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(HyCAN PUBLIC xtr::xtr libnl::libnl)
 
@@ -31,3 +32,11 @@ endif ()
 if (TEST_HYCAN_LATENCY)
     target_compile_definitions(HyCAN PUBLIC HYCAN_LATENCY_TEST)
 endif ()
+
+include(GNUInstallDirs)
+install(TARGETS HyCAN
+        LIBRARY DESTINATION
+        ARCHIVE DESTINATION
+        RUNTIME DESTINATION
+)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ DESTINATION include/HyCAN)

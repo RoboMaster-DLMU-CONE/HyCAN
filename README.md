@@ -2,10 +2,14 @@
 
 ## 亮点
 
+- 基于`epoll`的高并发支持。每秒100k消息的并发场景下：
+    - 平均 `25%` CPU占用（ AMD Ryzen 7 7840HS
+      ），无任何丢帧。
+    - 每条消息平均15us延迟
+    - [详见InterfaceStressTest](tests/InterfaceStressTest.cpp)
 - 日志功能，随时监控CAN总线信息
 - 便于使用的API接口
 - 无需脚本，直接控制Netlink开关
-- 基于epoll的高并发支持
 
 ## 接入工程
 
@@ -23,10 +27,21 @@ sudo modprobe vcan
 sudo modprobe can
 ```
 
-### Conan安装依赖
+### 从源代码构建
+
+#### Conan安装依赖
 
 ```shell
 conan install . --build=missing -s build_type=Release
+```
+
+#### CMake构建
+
+```shell
+cmake --preset conan-release
+cmake --build build/Release
+#可选：安装库到系统
+sudo cmake --install build/Release
 ```
 
 ## Todo
