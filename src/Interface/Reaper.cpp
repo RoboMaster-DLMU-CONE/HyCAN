@@ -3,7 +3,38 @@
 
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
+#include <sys/sysinfo.h>
 #include <linux/can.h>
+
+#include <utility>
+
+inline void lock_memory(sink& s)
+{
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
+        XTR_LOGL(error, s, "Failed to lock memory: {}", strerror(errno));
+    }
+}
+
+inline void make_real_time(sink& s)
+{
+    sched_param param{};
+    param.sched_priority = 80;
+    if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &param) != 0) {
+        XTR_LOGL(error, s, "Failed to make thread real time: {}", strerror(errno));
+    }
+}
+
+inline void affinize_cpu(const uint8_t cpu, sink& s)
+{
+    cpu_set_t cpu_set;
+    CPU_ZERO(&cpu_set);
+    CPU_SET(cpu, &cpu_set);
+
+    if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set), &cpu_set) != 0)
+    {
+        XTR_LOGL(error, s, "Failed to set cpu affinity: {}", strerror(errno));
+    }
+}
 
 namespace HyCAN
 {
@@ -24,6 +55,8 @@ namespace HyCAN
 
         epoll_fd_add_sock_fd(thread_event_fd);
         epoll_fd_add_sock_fd(socket.sock_fd);
+        thread_counter++;
+        cpu_core = thread_counter % get_nprocs();
     }
 
     void Reaper::start()
@@ -53,12 +86,13 @@ namespace HyCAN
         {
             return unexpected("Reaper thread is running.");
         }
-        funcs[can_id] = func;
+        funcs[can_id] = std::move(func);
         return {};
     }
 
     void Reaper::reap_process(const stop_token& stop_token)
     {
+        lock_memory(s); make_real_time(s); affinize_cpu(cpu_core, s);
         epoll_event events[MAX_EPOLL_EVENT]{};
         while (true)
         {

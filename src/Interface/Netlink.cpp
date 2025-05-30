@@ -41,11 +41,11 @@ namespace HyCAN
         }
         if constexpr (state == 0)
         {
-            XTR_LOGL(info, s, "Setting up Netlink for {}", interface_name);
+            XTR_LOGL(info, s, "Setting down Netlink for {}", interface_name);
         }
         else
         {
-            XTR_LOGL(info, s, "Setting down Netlink for {}", interface_name);
+            XTR_LOGL(info, s, "Setting up Netlink for {}", interface_name);
         }
         const int ifindex = static_cast<int>(if_nametoindex(interface_name.data()));
         if (ifindex == 0)

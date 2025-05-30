@@ -23,7 +23,7 @@ namespace HyCAN
         template <CanFrameConvertiable T>
         void send(T frame) { sender.send(std::move(frame)); };
 
-        expected<void, string> registerCallback(const size_t can_id, const function<void(can_frame&&)>& func);
+        expected<void, string> registerCallback(size_t can_id, const function<void(can_frame&&)>& func);
 
     private:
         std::string interface_name;

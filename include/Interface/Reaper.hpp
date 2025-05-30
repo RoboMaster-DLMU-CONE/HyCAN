@@ -15,6 +15,7 @@ using std::string_view, std::function, std::format, std::jthread, std::stop_toke
 using xtr::sink, xtr::logger;
 
 static constexpr size_t MAX_EPOLL_EVENT = 2048;
+static uint8_t thread_counter;
 
 namespace HyCAN
 {
@@ -40,6 +41,7 @@ namespace HyCAN
         Socket socket;
         int thread_event_fd{};
         int epoll_fd{};
+        uint8_t cpu_core{};
         function<void(can_frame&&)> funcs[2048];
         sink s;
         string_view interface_name;
