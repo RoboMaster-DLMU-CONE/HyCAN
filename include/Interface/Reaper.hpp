@@ -13,11 +13,11 @@
 #include "Socket.hpp"
 
 using std::string_view, std::function, std::format, std::jthread, std::stop_token, std::expected, std::unexpected,
+    std::atomic,
     std::string;
 using xtr::sink, xtr::logger;
 
 static constexpr size_t MAX_EPOLL_EVENT = 2048;
-static uint8_t thread_counter;
 
 namespace HyCAN
 {
@@ -37,18 +37,34 @@ namespace HyCAN
 
         expected<void, string> registerFunc(size_t can_id, function<void(can_frame&&)> func) noexcept;
 
+#ifdef HYCAN_LATENCY_TEST
+        struct LatencyStats
+        {
+            uint64_t total_latency_ns = 0;
+            uint64_t message_count = 0;
+            double average_latency_us = 0.0;
+        };
+
+        LatencyStats get_latency_stats() const;
+#endif
+
     private:
         void reap_process(const stop_token& stop_token);
         void epoll_fd_add_sock_fd(int sock_fd);
 
         Socket socket;
-        int thread_event_fd{};
-        int epoll_fd{};
+        int thread_event_fd{-1};
+        int epoll_fd{-1};
         uint8_t cpu_core{};
-        function<void(can_frame&&)> funcs[2048];
+        function<void(can_frame&&)> funcs[2048]{};
         sink s;
         string_view interface_name;
         jthread reap_thread;
+
+#ifdef HYCAN_LATENCY_TEST
+        mutable atomic<uint64_t> accumulated_latency_ns{0};
+        mutable atomic<uint64_t> latency_message_count{0};
+#endif
     };
 }
 

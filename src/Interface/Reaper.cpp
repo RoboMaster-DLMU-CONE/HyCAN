@@ -7,6 +7,9 @@
 #include <linux/can.h>
 
 #include <utility>
+#include <chrono>
+
+static atomic<uint8_t> thread_counter;
 
 inline void lock_memory(sink& s)
 {
@@ -56,12 +59,12 @@ namespace HyCAN
         }
 
         epoll_fd_add_sock_fd(thread_event_fd);
-        thread_counter++;
-        cpu_core = thread_counter % get_nprocs();
+        cpu_core = thread_counter.fetch_add(1, std::memory_order_acquire) % get_nprocs();
     }
 
     Reaper::~Reaper()
     {
+        stop();
         if (epoll_fd != -1)
         {
             close(epoll_fd);
@@ -139,6 +142,32 @@ namespace HyCAN
                     if (const int fd = events[i].data.fd; read(fd, &frame, sizeof
                                                                frame) > 0)
                     {
+#ifdef HYCAN_LATENCY_TEST
+                        auto receive_time = std::chrono::high_resolution_clock::now();
+                        if (frame.len == 8)
+                        {
+                            uint64_t send_timestamp_ns_count;
+                            memcpy(&send_timestamp_ns_count, frame.data, sizeof(send_timestamp_ns_count));
+                            auto send_time_epoch_ns = std::chrono::nanoseconds(send_timestamp_ns_count);
+                            auto latency_duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                receive_time.time_since_epoch() - send_time_epoch_ns);
+                            if (latency_duration_ns.count() >= 0)
+                            {
+                                accumulated_latency_ns.
+                                    fetch_add(latency_duration_ns.count(), std::memory_order_relaxed);
+                                latency_message_count.fetch_add(1, std::memory_order_relaxed);
+                            }
+                            else
+                            {
+                                XTR_LOGL(warning, s, "Negative latency on {}: {} ns. Send ts: {}, Recv ts: {}",
+                                         interface_name, latency_duration_ns.count(),
+                                         send_timestamp_ns_count,
+                                         std::chrono::duration_cast<std::chrono::nanoseconds>(receive_time.
+                                             time_since_epoch()).count());
+                            }
+                        }
+
+#endif
                         XTR_LOGL(debug, s, "Message from {}, CAN ID: {}", interface_name, frame.can_id);
                         if (funcs[frame.can_id])
                         {
@@ -164,4 +193,18 @@ namespace HyCAN
             XTR_LOGL(fatal, s, "Failed to EPOLL_CTL_ADD thread_event_fd: {}", strerror(errno));
         }
     }
+#ifdef HYCAN_LATENCY_TEST
+    Reaper::LatencyStats Reaper::get_latency_stats() const
+    {
+        LatencyStats stats;
+        stats.total_latency_ns = accumulated_latency_ns.load(std::memory_order_relaxed);
+        stats.message_count = latency_message_count.load(std::memory_order_relaxed);
+        if (stats.message_count > 0)
+        {
+            stats.average_latency_us = static_cast<double>(stats.total_latency_ns) / static_cast<double>(stats.
+                message_count) / 1000.0;
+        }
+        return stats;
+    }
+#endif
 }

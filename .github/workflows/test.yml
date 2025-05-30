@@ -38,7 +38,7 @@ jobs:
           conan install . --build=missing
       - name: Build Project
         run: |
-          cmake --preset conan-release -G Ninja -DBUILD_HYCAN_TEST=ON
+          cmake --preset conan-release -G Ninja -DBUILD_HYCAN_TEST=ON -DTEST_HYCAN_LATENCY=ON
           cmake --build --preset conan-release
 
       - name: Test Project

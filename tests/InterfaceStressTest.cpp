@@ -10,14 +10,16 @@
 #include <numeric> // For std::iota
 
 #include <linux/can.h>
+
+
 #include "Interface/Interface.hpp" // Adjust path if necessary
 #include "Interface/Logger.hpp"    // For sink, if direct logging is needed
 
 // --- Test Configuration ---
-constexpr int NUM_INTERFACES = 15;
-constexpr int NUM_SENDER_THREADS = 15;
+constexpr int NUM_INTERFACES = 10;
+constexpr int NUM_SENDER_THREADS = 10;
 constexpr int TEST_DURATION_SECONDS = 10; // How long the sending phase lasts
-constexpr unsigned int SEND_INTERVAL_MICROSECONDS = 100; // Delay between sends per thread (0 for max effort)
+constexpr unsigned int SEND_INTERVAL_MICROSECONDS = 1; // Delay between sends per thread (0 for max effort)
 constexpr canid_t BASE_CAN_ID = 0x200; // Starting CAN ID for interfaces
 const std::string VCAN_BASENAME = "vcan_stress_";
 
@@ -56,14 +58,6 @@ void sender_worker_fn(
     std::cout << "Sender thread " << thread_id << " started." << std::endl;
     can_frame frame_to_send{};
     frame_to_send.len = 8;
-    // Fill frame.data with a simple pattern
-    for (__u8 i = 0; i < frame_to_send.len; ++i)
-    {
-        frame_to_send.data[i] = static_cast<__u8>(thread_id + i);
-    }
-
-    uint64_t messages_sent_by_this_thread = 0;
-    int interface_rr_index = thread_id % NUM_INTERFACES; // Start round-robin from different points
 
     std::array<std::unique_ptr<HyCAN::Sender>, NUM_INTERFACES> senders;
     std::array<std::string, NUM_INTERFACES> names;
@@ -72,21 +66,37 @@ void sender_worker_fn(
         names[i] = format("vcan_stress_{}", i);
         senders[i] = std::make_unique<HyCAN::Sender>(HyCAN::Sender(names[i]));
     }
+    uint64_t messages_sent_by_this_thread = 0;
+    int interface_rr_index = thread_id % NUM_INTERFACES;
 
     while (!g_stop_sending_flag.load(std::memory_order_acquire))
     {
-        // Select interface and CAN ID (round-robin)
-        const int current_interface_idx = interface_rr_index % NUM_INTERFACES;
-        frame_to_send.can_id = base_can_id + current_interface_idx; // Target specific ID for this interface
+        frame_to_send.can_id = base_can_id + interface_rr_index;
 
-        senders[current_interface_idx]->send(frame_to_send);
-        messages_sent_by_this_thread++;
+#ifdef HYCAN_LATENCY_TEST
+        auto send_time = std::chrono::high_resolution_clock::now();
+        uint64_t send_timestamp_ns_count = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            send_time.time_since_epoch()).count();
+        std::memcpy(frame_to_send.data, &send_timestamp_ns_count, sizeof(send_timestamp_ns_count));
+#else
+        for (__u8 i = 0; i < frame_to_send.len; ++i)
+        {
+            frame_to_send.data[i] = static_cast<__u8>(thread_id + i);
+        }
+#endif
+
+        if (senders[interface_rr_index])
+        {
+            senders[interface_rr_index]->send(frame_to_send);
+            messages_sent_by_this_thread++;
+        }
+
+        interface_rr_index = (interface_rr_index + 1) % NUM_INTERFACES;
 
         if constexpr (SEND_INTERVAL_MICROSECONDS > 0)
         {
             std::this_thread::sleep_for(std::chrono::microseconds(SEND_INTERVAL_MICROSECONDS));
         }
-        interface_rr_index++;
     }
     g_total_sent_attempts.fetch_add(messages_sent_by_this_thread, std::memory_order_relaxed);
     std::cout << "Sender thread " << thread_id << " finished. Attempted to send " << messages_sent_by_this_thread <<
@@ -248,6 +258,46 @@ int main()
         total_received_across_all_interfaces += count;
     }
     std::cout << "Total messages received across all interfaces: " << total_received_across_all_interfaces << std::endl;
+#ifdef HYCAN_LATENCY_TEST
+    std::cout << "\n--- Latency Test Results ---" << std::endl;
+    uint64_t overall_latency_messages = 0;
+    double overall_weighted_latency_sum_us = 0.0;
+
+    for (int i = 0; i < NUM_INTERFACES; ++i)
+    {
+        if (hycan_interfaces[i])
+        {
+            // 确保接口对象有效
+            std::string if_name = VCAN_BASENAME + std::to_string(i);
+
+            if (const HyCAN::Reaper::LatencyStats stats = hycan_interfaces[i]->get_reaper_latency_stats(); stats.
+                message_count > 0)
+            {
+                std::cout << "Interface " << if_name << ": Avg Latency "
+                    << std::fixed << std::setprecision(2) << stats.average_latency_us << " us "
+                    << "(" << stats.message_count << " msgs)" << std::endl;
+                overall_latency_messages += stats.message_count;
+                overall_weighted_latency_sum_us += stats.average_latency_us * static_cast<double>(stats.message_count);
+            }
+            else
+            {
+                std::cout << "Interface " << if_name << ": No latency messages processed." << std::endl;
+            }
+        }
+    }
+    if (overall_latency_messages > 0)
+    {
+        const double final_overall_avg_latency_us = overall_weighted_latency_sum_us / static_cast<double>(
+            overall_latency_messages);
+        std::cout << "Overall Average Latency: "
+            << std::fixed << std::setprecision(2) << final_overall_avg_latency_us << " us "
+            << "(" << overall_latency_messages << " total msgs)" << std::endl;
+    }
+    else
+    {
+        std::cout << "No latency messages processed overall for any interface." << std::endl;
+    }
+#endif
 
     std::cout << "\n--- HyCAN Interface Stress Test Finished ---" << std::endl;
     return EXIT_SUCCESS;

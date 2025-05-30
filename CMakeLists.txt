@@ -4,8 +4,9 @@ project(HyCAN)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(CMAKE_CXX_STANDARD 23)
-option(BUILD_HYCAN_EXAMPLE "Build HyCAN Examples" ON)
-option(BUILD_HYCAN_TEST "Build HyCAN Tests" ON)
+option(BUILD_HYCAN_EXAMPLE "Build HyCAN Examples" OFF)
+option(BUILD_HYCAN_TEST "Build HyCAN Tests" OFF)
+option(TEST_HYCAN_LATENCY "Adding Latency statistics for testing" OFF)
 
 find_package(xtr REQUIRED)
 find_package(libnl REQUIRED)
@@ -23,7 +24,10 @@ if (BUILD_HYCAN_EXAMPLE)
 endif ()
 
 if (BUILD_HYCAN_TEST)
-    target_compile_definitions(HyCAN PRIVATE HYCAN_TEST_FEATURE)
     enable_testing()
     include(HyCANTests)
+endif ()
+
+if (TEST_HYCAN_LATENCY)
+    target_compile_definitions(HyCAN PUBLIC HYCAN_LATENCY_TEST)
 endif ()
