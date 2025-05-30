@@ -54,14 +54,26 @@ namespace HyCAN
         }
 
         epoll_fd_add_sock_fd(thread_event_fd);
-        epoll_fd_add_sock_fd(socket.sock_fd);
         thread_counter++;
         cpu_core = thread_counter % get_nprocs();
+    }
+
+    Reaper::~Reaper()
+    {
+        if (epoll_fd != -1)
+        {
+            close(epoll_fd);
+        }
+        if (thread_event_fd != -1)
+        {
+            close(thread_event_fd);
+        }
     }
 
     void Reaper::start()
     {
         socket.ensure_connected();
+        epoll_fd_add_sock_fd(socket.sock_fd);
         socket.flush();
         if (!reap_thread.joinable())
         {

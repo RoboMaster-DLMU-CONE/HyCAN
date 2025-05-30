@@ -26,6 +26,7 @@ namespace HyCAN
         Reaper() = delete;
         Reaper(const Reaper& other) = delete;
         Reaper(Reaper&& other) = delete;
+        ~Reaper();
         Reaper& operator=(const Reaper& other) = delete;
         Reaper& operator=(Reaper&& other) noexcept = delete;
 

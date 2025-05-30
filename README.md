@@ -31,9 +31,9 @@ conan install . --build=missing -s build_type=Release
 
 ## Todo
 
-- [x] xtr日志库
-- [x] CTest
-- [ ] 线程亲和
+- [ ] 更多测试
+- [ ] 封装常用功能的`Device`类
+- [ ] 封装常用功能的`Message`类
 
 ## Credit
 
