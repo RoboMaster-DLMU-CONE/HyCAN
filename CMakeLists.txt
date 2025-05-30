@@ -1,18 +1,19 @@
 cmake_minimum_required(VERSION 3.27)
 
-project(HyCAN VERSION 0.3.0)
+project(HyCAN VERSION 0.3.1)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(CMAKE_CXX_STANDARD 23)
-option(BUILD_HYCAN_EXAMPLE "Build HyCAN Examples" OFF)
-option(BUILD_HYCAN_TEST "Build HyCAN Tests" OFF)
-option(TEST_HYCAN_LATENCY "Adding Latency statistics for testing" OFF)
+
+option(BUILD_HYCAN_EXAMPLE "Build HyCAN Examples" ON)
+option(BUILD_HYCAN_TEST "Build HyCAN Tests" ON)
+option(TEST_HYCAN_LATENCY "Adding Latency statistics for testing" ON)
 
 find_package(xtr REQUIRED)
 find_package(libnl REQUIRED)
 
 file(GLOB_RECURSE HYCAN_SOURCES src/*.cpp)
-add_library(HyCAN SHARED)
+add_library(HyCAN)
 target_sources(HyCAN PRIVATE ${HYCAN_SOURCES})
 target_include_directories(HyCAN PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
