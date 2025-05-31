@@ -1,5 +1,5 @@
-#include "Interface/Socket.hpp"
-#include "Interface/Logger.hpp"
+#include "HyCAN/Interface/Socket.hpp"
+#include "HyCAN/Interface/Logger.hpp"
 
 #include <fcntl.h>
 #include <unistd.h>

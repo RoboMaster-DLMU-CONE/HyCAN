@@ -29,7 +29,7 @@ jobs:
           conan profile detect --force
           DEFAULT_PROFILE_PATH=$(conan profile path default)
           sed -i "s|^compiler.cppstd=.*|compiler.cppstd=gnu23|" "$DEFAULT_PROFILE_PATH"
-          conan install . --output-folder=build/Release -s build_type=Release --build=missing
+          conan install . -of=build/Release -s build_type=Release --build=missing
       - name: Build Project
         run: |
           cmake --preset conan-release -G Ninja -DBUILD_HYCAN_TEST=ON -DTEST_HYCAN_LATENCY=ON

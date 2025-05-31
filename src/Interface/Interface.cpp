@@ -1,5 +1,5 @@
-#include "Interface/Interface.hpp"
-#include "Interface/Logger.hpp"
+#include "HyCAN/Interface/Interface.hpp"
+#include "HyCAN/Interface/Logger.hpp"
 
 namespace HyCAN
 {

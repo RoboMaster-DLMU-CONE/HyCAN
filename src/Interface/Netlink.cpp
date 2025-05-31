@@ -1,6 +1,6 @@
-#include "Interface/Netlink.hpp"
-#include "Interface/VCAN.hpp"
-#include "Interface/Logger.hpp"
+#include "HyCAN/Interface/Netlink.hpp"
+#include "HyCAN/Interface/VCAN.hpp"
+#include "HyCAN/Interface/Logger.hpp"
 
 #include <net/if.h>
 
