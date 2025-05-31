@@ -1,4 +1,4 @@
-#include "HyCAN/Interface/VCAN.hpp"
+#include "hycan/Interface/VCAN.hpp"
 #include <net/if.h>
 
 #include <netlink/netlink.h>

@@ -1,5 +1,5 @@
-#include "HyCAN/Interface/Reaper.hpp"
-#include "HyCAN/Interface/Logger.hpp"
+#include "hycan/Interface/Reaper.hpp"
+#include "hycan/Interface/Logger.hpp"
 
 #include <sys/epoll.h>
 #include <sys/eventfd.h>

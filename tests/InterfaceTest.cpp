@@ -10,7 +10,7 @@
 #include <cstring> // For std::memcpy in frame construction if needed
 
 #include <linux/can.h>
-#include "HyCAN/Interface/Interface.hpp" // Adjust path if necessary
+#include "hycan/Interface/Interface.hpp" // Adjust path if necessary
 
 // Test constants
 const std::string TEST_INTERFACE_NAME = "vcan_hytest"; // Unique vcan interface name for this test

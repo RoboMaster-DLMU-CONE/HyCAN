@@ -12,8 +12,8 @@
 #include <linux/can.h>
 
 
-#include "HyCAN/Interface/Interface.hpp" // Adjust path if necessary
-#include "HyCAN/Interface/Logger.hpp"    // For sink, if direct logging is needed
+#include "hycan/Interface/Interface.hpp" // Adjust path if necessary
+#include "hycan/Interface/Logger.hpp"    // For sink, if direct logging is needed
 
 // --- Test Configuration ---
 constexpr int NUM_INTERFACES = 10;
