@@ -19,7 +19,7 @@ namespace HyCAN
         explicit Sender(string_view interface_name);
         Sender() = delete;
 
-        template <CanFrameConvertiable T>
+        template <CanFrameConvertible T>
         void send(T frame)
         {
             socket.ensure_connected();
