@@ -3,7 +3,6 @@
 
 #include <thread>
 #include <functional>
-#include <expected>
 #include <string>
 
 #include <linux/can.h>
@@ -12,7 +11,7 @@
 
 #include "Socket.hpp"
 
-using std::string_view, std::function, std::format, std::jthread, std::stop_token, std::expected, std::unexpected,
+using std::string_view, std::function, std::format, std::jthread, std::stop_token,
     std::atomic,
     std::string;
 using xtr::sink, xtr::logger;
@@ -35,7 +34,7 @@ namespace HyCAN
         void start();
         void stop();
 
-        expected<void, string> registerFunc(size_t can_id, function<void(can_frame&&)> func) noexcept;
+        void tryRegisterFunc(size_t can_id, function<void(can_frame&&)> func);
 
 #ifdef HYCAN_LATENCY_TEST
         struct LatencyStats

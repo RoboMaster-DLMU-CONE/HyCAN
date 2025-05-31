@@ -23,13 +23,8 @@ namespace HyCAN
         reaper.stop();
     }
 
-    expected<void, string> Interface::registerCallback(const size_t can_id, const function<void(can_frame&&)>& func)
+    void Interface::tryRegisterCallback(const size_t can_id, const function<void(can_frame&&)>& func)
     {
-        auto result = reaper.registerFunc(can_id, func);
-        if (!result)
-        {
-            XTR_LOGL(error, s, "{}", result.error());
-        }
-        return result;
+        reaper.tryRegisterFunc(can_id, func);
     }
 }

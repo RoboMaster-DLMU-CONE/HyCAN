@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.27)
 project(HyCAN VERSION 0.5.0)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 
 option(BUILD_HYCAN_EXAMPLE "Build HyCAN Examples" ON)
 option(BUILD_HYCAN_TEST "Build HyCAN Tests" ON)

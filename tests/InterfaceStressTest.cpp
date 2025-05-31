@@ -149,15 +149,8 @@ int main()
                 stress_test_callback(std::move(frame), i, target_can_id);
             };
 
-            if (auto reg_status = interface_ptr->registerCallback(target_can_id, callback_for_interface); !reg_status)
-            {
-                std::cerr << "FAIL: Callback registration failed for " << if_name << " and ID 0x" << std::hex <<
-                    target_can_id << std::dec << ": " << reg_status.error() << std::endl;
-                // Depending on desired strictness, could exit here or just skip this interface
-                // For now, we'll try to continue, but this interface won't receive messages.
-                hycan_interfaces.emplace_back(nullptr); // Placeholder for failed interface
-                continue;
-            }
+            interface_ptr->tryRegisterCallback(target_can_id, callback_for_interface);
+
             std::cout << "Callback registered for " << if_name << " on ID 0x" << std::hex << target_can_id << std::dec
                 << std::endl;
             hycan_interfaces.push_back(std::move(interface_ptr));

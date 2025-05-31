@@ -23,7 +23,7 @@ namespace HyCAN
         template <CanFrameConvertible T>
         void send(T frame) { sender.send(std::move(frame)); };
 
-        expected<void, string> registerCallback(size_t can_id, const function<void(can_frame&&)>& func);
+        void tryRegisterCallback(size_t can_id, const function<void(can_frame&&)>& func);
 #ifdef HYCAN_LATENCY_TEST
         Reaper::LatencyStats get_reaper_latency_stats() const
         {

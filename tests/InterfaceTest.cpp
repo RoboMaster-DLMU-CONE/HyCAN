@@ -77,33 +77,13 @@ int main()
     frame_to_send.can_id = TEST_CAN_ID;
     frame_to_send.len = TEST_DLC;
     std::memcpy(frame_to_send.data, TEST_DATA.data(), TEST_DLC);
-
-
-    // --- Test 1: Register Callback (before interface UP) ---
-    std::cout << "\nTEST 1: Registering callback for CAN ID 0x" << std::hex << TEST_CAN_ID << std::dec << "..." <<
-        std::endl;
     g_callback_triggered.store(false, std::memory_order_relaxed);
     g_received_frame.reset();
 
-    auto reg_status = interface.registerCallback(TEST_CAN_ID, test_can_callback);
-    if (!reg_status)
-    {
-        std::cerr << "FAIL: Callback registration failed: " << reg_status.error() << std::endl;
-        result_code = EXIT_FAILURE;
-    }
-    else
-    {
-        std::cout << "PASS: Callback registered successfully." << std::endl;
-    }
+    interface.tryRegisterCallback(TEST_CAN_ID, test_can_callback);
 
-    if (result_code == EXIT_FAILURE)
-    {
-        std::cerr << "Aborting tests due to registration failure." << std::endl;
-        return result_code;
-    }
-
-    // --- Test 2: Interface UP and Send/Receive ---
-    std::cout << "\nTEST 2: Bringing interface UP and testing send/receive..." << std::endl;
+    // --- Test 1: Interface UP and Send/Receive ---
+    std::cout << "\nTEST 1: Bringing interface UP and testing send/receive..." << std::endl;
     interface.up();
     std::cout << "Interface UP command issued. Waiting briefly for setup..." << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(300)); // Allow time for interface and reaper thread to start
@@ -112,19 +92,19 @@ int main()
     interface.send(frame_to_send);
 
     std::cout << "Waiting for callback (up to 2 seconds)..." << std::endl;
-    bool triggered_in_test2 = false;
+    bool triggered_in_test1 = false;
     for (int i = 0; i < 20; ++i)
     {
         // Poll for up to 2 seconds (20 * 100ms)
         if (g_callback_triggered.load(std::memory_order_acquire))
         {
-            triggered_in_test2 = true;
+            triggered_in_test1 = true;
             break;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    if (!triggered_in_test2)
+    if (!triggered_in_test1)
     {
         std::cerr << "FAIL: Callback was not triggered after sending message." << std::endl;
         result_code = EXIT_FAILURE;
@@ -153,8 +133,8 @@ int main()
         }
     }
 
-    // --- Test 3: Interface DOWN and Verify No More Callbacks ---
-    std::cout << "\nTEST 3: Bringing interface DOWN and verifying no messages are received..." << std::endl;
+    // --- Test 2: Interface DOWN and Verify No More Callbacks ---
+    std::cout << "\nTEST 2: Bringing interface DOWN and verifying no messages are received..." << std::endl;
     interface.down();
     std::cout << "Interface DOWN command issued. Waiting briefly for teardown..." << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(300)); // Allow time for reaper thread to stop

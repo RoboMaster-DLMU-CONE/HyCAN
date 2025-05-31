@@ -29,7 +29,7 @@ jobs:
         run: |
           conan profile detect --force
           DEFAULT_PROFILE_PATH=$(conan profile path default)
-          sed -i "s|^compiler.cppstd=.*|compiler.cppstd=gnu23|" "$DEFAULT_PROFILE_PATH"
+          sed -i "s|^compiler.cppstd=.*|compiler.cppstd=gnu20|" "$DEFAULT_PROFILE_PATH"
           conan install . -of=build/Release -s build_type=Release --build=missing
       - name: Build Project
         run: |
