@@ -44,28 +44,3 @@ install(TARGETS HyCAN
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
-
-install(EXPORT HyCANTargets
-        FILE HyCANTargets.cmake
-        NAMESPACE HyCAN::
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/HyCAN
-)
-
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(
-        HyCANConfigVersion.cmake
-        VERSION ${PROJECT_VERSION}
-        COMPATIBILITY SameMajorVersion
-)
-
-configure_package_config_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/HyCANConfig.cmake.in
-        ${CMAKE_CURRENT_BINARY_DIR}/HyCANConfig.cmake
-        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/HyCAN
-)
-
-install(FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/HyCANConfig.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/HyCANConfigVersion.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/HyCAN
-)
