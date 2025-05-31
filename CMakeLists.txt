@@ -15,7 +15,10 @@ find_package(libnl REQUIRED)
 file(GLOB_RECURSE HYCAN_SOURCES src/*.cpp)
 add_library(HyCAN)
 target_sources(HyCAN PRIVATE ${HYCAN_SOURCES})
-target_include_directories(HyCAN PUBLIC include)
+target_include_directories(HyCAN PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
 target_link_libraries(HyCAN PUBLIC xtr::xtr libnl::libnl)
 
 if (BUILD_HYCAN_EXAMPLE)
@@ -33,8 +36,36 @@ endif ()
 
 include(GNUInstallDirs)
 install(TARGETS HyCAN
-        LIBRARY DESTINATION
-        ARCHIVE DESTINATION
-        RUNTIME DESTINATION
+        EXPORT HyCANTargets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(EXPORT HyCANTargets
+        FILE HyCANTargets.cmake
+        NAMESPACE HyCAN::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/HyCAN
+)
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+        HyCANConfigVersion.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+)
+
+configure_package_config_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/HyCANConfig.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/HyCANConfig.cmake
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/HyCAN
+)
+
+install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/HyCANConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/HyCANConfigVersion.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/HyCAN
+)

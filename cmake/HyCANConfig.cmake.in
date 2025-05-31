@@ -1,0 +1,9 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(xtr)
+find_dependency(libnl)
+
+include("${CMAKE_CURRENT_LIST_DIR}/HyCANTargets.cmake")
+
+check_required_components(HyCAN)
