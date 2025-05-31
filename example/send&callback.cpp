@@ -9,7 +9,7 @@ using HyCAN::Interface;
 
 int main()
 {
-    const function<void(can_frame&&)> callback = [](can_frame&& frame)
+    const function callback = [](can_frame&& frame)
     {
         std::cout << "CAN ID: 0x" << std::hex << frame.can_id
             << " DLC: " << std::dec << static_cast<int>(frame.len)
