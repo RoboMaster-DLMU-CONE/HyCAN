@@ -41,7 +41,7 @@
 #### Conan安装依赖
 
 ```shell
-conan install . --build=missing -s build_type=Release
+conan install . -of=build --build=missing -s build_type=Release
 ```
 
 #### CMake构建
@@ -51,6 +51,49 @@ cmake --preset conan-release
 cmake --build build/Release
 #可选：安装库到系统
 sudo cmake --install build/Release
+```
+
+#### 本地构建Conan包
+
+```shell
+# 在本地构建产生缓存后，可以在本地其它项目中使用Conan添加HyCAN
+conan create . --version=x.x.x # 替换为CMakeLists中的版本号
+```
+
+### 使用HyCAN
+
+- 编写conanfile
+
+```python
+# 示例
+from conan import ConanFile
+from conan.tools.cmake import cmake_layout
+
+
+class ExampleRecipe(ConanFile):
+    settings = "os", "compiler", "build_type", "arch"
+    generators = "CMakeDeps", "CMakeToolchain"
+
+    def requirements(self):
+        self.requires("hycan/x.x.x")  # 本地构建或conan-center中的版本号
+
+    def layout(self):
+        cmake_layout(self)
+```
+
+- 运行conan
+
+- 在CMake中链接
+
+```cmake
+cmake_minimum_required(VERSION 3.31)
+project(testconanhycan)
+
+set(CMAKE_CXX_STANDARD 20)
+find_package(hycan REQUIRED)
+
+add_executable(testconanhycan main.cpp)
+target_link_libraries(testconanhycan PRIVATE hycan::hycan)
 ```
 
 ## Todo
