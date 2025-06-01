@@ -4,6 +4,7 @@
 #include <thread>
 #include <functional>
 #include <string>
+#include <set>
 
 #include <linux/can.h>
 
@@ -13,7 +14,7 @@
 
 using std::string_view, std::function, std::format, std::jthread, std::stop_token,
     std::atomic,
-    std::string;
+    std::string, std::set;
 using xtr::sink, xtr::logger;
 
 static constexpr size_t MAX_EPOLL_EVENT = 2048;
@@ -34,7 +35,7 @@ namespace HyCAN
         void start();
         void stop();
 
-        void tryRegisterFunc(size_t can_id, function<void(can_frame&&)> func);
+        void tryRegisterFunc(const set<size_t>& can_ids, function<void(can_frame&&)> func);
 
 #ifdef HYCAN_LATENCY_TEST
         struct LatencyStats

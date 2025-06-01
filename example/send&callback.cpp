@@ -29,7 +29,7 @@ int main()
 
     Interface interface("vcan0");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    interface.tryRegisterCallback(0x100, callback);
+    interface.tryRegisterCallback({0x100}, callback);
     interface.up();
     std::this_thread::sleep_for(std::chrono::seconds(2));
     for (int i = 0; i < 5; ++i)

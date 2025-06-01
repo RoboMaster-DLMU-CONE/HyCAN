@@ -80,7 +80,7 @@ int main()
     g_callback_triggered.store(false, std::memory_order_relaxed);
     g_received_frame.reset();
 
-    interface.tryRegisterCallback(TEST_CAN_ID, test_can_callback);
+    interface.tryRegisterCallback({TEST_CAN_ID}, test_can_callback);
 
     // --- Test 1: Interface UP and Send/Receive ---
     std::cout << "\nTEST 1: Bringing interface UP and testing send/receive..." << std::endl;
