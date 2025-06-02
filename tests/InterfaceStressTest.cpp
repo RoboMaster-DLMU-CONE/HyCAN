@@ -149,7 +149,7 @@ int main()
                 stress_test_callback(std::move(frame), i, target_can_id);
             };
 
-            interface_ptr->tryRegisterCallback({target_can_id}, callback_for_interface);
+            interface_ptr->tryRegisterCallback<can_frame>({target_can_id}, callback_for_interface);
 
             std::cout << "Callback registered for " << if_name << " on ID 0x" << std::hex << target_can_id << std::dec
                 << std::endl;
