@@ -97,27 +97,6 @@ namespace HyCAN
         }
     }
 
-    void Reaper::tryRegisterFunc(const set<size_t>& can_ids, function<void(can_frame&&)> func)
-    {
-        for (auto id : can_ids)
-        {
-            if (id >= 2048)
-            {
-                XTR_LOGL(error, s, "CAN ID {} exceeds maximum limit of 2047", id);
-                return;
-            }
-            if (!func)
-            {
-                XTR_LOGL(error, s, "Provided callback function is empty");
-            }
-            if (reap_thread.joinable())
-            {
-                XTR_LOGL(error, s, "Reaper thread is running.");
-            }
-            funcs[id] = std::move(func);
-        }
-    }
-
     void Reaper::reap_process(const stop_token& stop_token)
     {
         lock_memory(s);

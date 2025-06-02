@@ -11,6 +11,7 @@
 #include <xtr/logger.hpp>
 
 #include "Socket.hpp"
+#include "CanFrameConvertible.hpp"
 
 using std::string_view, std::function, std::format, std::jthread, std::stop_token,
     std::atomic,
@@ -35,7 +36,40 @@ namespace HyCAN
         void start();
         void stop();
 
-        void tryRegisterFunc(const set<size_t>& can_ids, function<void(can_frame&&)> func);
+        template <CanFrameConvertible T = can_frame>
+        void tryRegisterFunc(const set<size_t>& can_ids, function<void(T&&)> func)
+        {
+            function<void(can_frame&&)> register_func;
+            if constexpr (std::is_same<T, can_frame>())
+            {
+                register_func = std::move(func);
+            }
+            else
+            {
+                register_func = [&func](can_frame&& frame)
+                {
+                    func(static_cast<T>(frame));
+                };
+            }
+
+            for (auto id : can_ids)
+            {
+                if (id >= 2048)
+                {
+                    XTR_LOGL(error, s, "CAN ID {} exceeds maximum limit of 2047", id);
+                    return;
+                }
+                if (!func)
+                {
+                    XTR_LOGL(error, s, "Provided callback function is empty");
+                }
+                if (reap_thread.joinable())
+                {
+                    XTR_LOGL(error, s, "Reaper thread is running.");
+                }
+                funcs[id] = std::move(register_func);
+            }
+        }
 
 #ifdef HYCAN_LATENCY_TEST
         struct LatencyStats
