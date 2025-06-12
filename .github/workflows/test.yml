@@ -24,8 +24,8 @@ jobs:
 
       - name: Build Project
         run: |
-          cmake -G Ninja -DBUILD_HYCAN_TEST=ON -DTEST_HYCAN_LATENCY=ON
-          cmake --build
+          cmake -S . -B build -G Ninja -DBUILD_HYCAN_TEST=ON -DTEST_HYCAN_LATENCY=ON
+          cmake --build build
 
       - name: Test Project
         run: |
