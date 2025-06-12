@@ -7,7 +7,6 @@
       ），**无丢帧**
     - **低延迟**：每条消息平均延迟低至**15us**
     - [详见InterfaceStressTest](tests/InterfaceStressTest.cpp)
-- 内置日志功能，调试轻松
 - 用户友好的API
 - 无需外置脚本，库内直接开关`Netlink`上的`CAN/VCAN`接口。
 
@@ -23,8 +22,7 @@
 ### 前置依赖
 
 - 构建工具
-    - CMake ( >= 3.27 )
-    - Conan ( >= 2 )
+    - CMake ( >= 3.20 )
 - 编译器
     - GCC ( >= 13 ) 或 Clang ( >= 15 )
 - 系统环境
@@ -38,62 +36,50 @@
 
 ### 从源代码构建
 
-#### Conan安装依赖
+#### 安装依赖
 
 ```shell
-conan install . -of=build --build=missing -s build_type=Release
+# Debian系
+sudo apt install pkg-config cmake libnl-3-dev libnl-nf-3-dev
 ```
 
 #### CMake构建
 
 ```shell
-cmake --preset conan-release
-cmake --build build/Release
-#可选：安装库到系统
-sudo cmake --install build/Release
-```
-
-#### 本地构建Conan包
-
-```shell
-# 在本地构建产生缓存后，可以在本地其它项目中使用Conan添加HyCAN
-conan create . --version=x.x.x # 替换为CMakeLists中的版本号
+cmake -S . -B build
+cmake --build build
+#可选：安装到系统
+sudo cmake --install build
 ```
 
 ### 使用HyCAN
 
-- 编写conanfile
-
-```python
-# 示例
-from conan import ConanFile
-from conan.tools.cmake import cmake_layout
-
-
-class ExampleRecipe(ConanFile):
-    settings = "os", "compiler", "build_type", "arch"
-    generators = "CMakeDeps", "CMakeToolchain"
-
-    def requirements(self):
-        self.requires("hycan/x.x.x")  # 本地构建或conan-center中的版本号
-
-    def layout(self):
-        cmake_layout(self)
-```
-
-- 运行conan
-
-- 在CMake中链接
+HyCAN支持接入CMake工程。请参考下面的`CMakeLists.txt`示例代码：
 
 ```cmake
-cmake_minimum_required(VERSION 3.31)
-project(testconanhycan)
+cmake_minimum_required(VERSION 3.20)
+project(MyConsumerApp)
 
-set(CMAKE_CXX_STANDARD 20)
-find_package(hycan REQUIRED)
+include(FetchContent)
 
-add_executable(testconanhycan main.cpp)
-target_link_libraries(testconanhycan PRIVATE hycan::hycan)
+# 尝试查找已安装的 HyCAN
+find_package(HyCAN QUIET)
+
+if (NOT HyCAN_FOUND)
+    message(STATUS "本地未找到 HyCAN 包，尝试从 GitHub 获取...")
+    FetchContent_Declare(
+            HyCAN_fetched
+            GIT_REPOSITORY "https://github.com/RoboMaster-DLMU-CONE/HyCAN"
+            GIT_TAG "main"
+    )
+    FetchContent_MakeAvailable(HyCAN_fetched)
+else ()
+    message(STATUS "已找到 HyCAN 版本 ${HyCAN_VERSION}")
+endif ()
+
+add_executable(MyConsumerApp main.cpp)
+
+target_link_libraries(MyConsumerApp PRIVATE HyCAN::HyCAN)
 ```
 
 ## Todo
@@ -104,5 +90,4 @@ target_link_libraries(testconanhycan PRIVATE hycan::hycan)
 
 ## Credit
 
-- [xtr](https://github.com/choll/xtr)
 - [libnl](https://github.com/thom311/libnl)
