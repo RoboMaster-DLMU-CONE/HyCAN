@@ -1,27 +1,28 @@
-#include "hycan/Interface/Socket.hpp"
-#include "hycan/Interface/Logger.hpp"
+#include "HyCAN/Interface/Socket.hpp"
 
+#include <cstring>
 #include <fcntl.h>
+#include <format>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <linux/can.h>
 #include <net/if.h>
 
+using std::unexpected, std::format, std::string_view;
+
 namespace HyCAN
 {
-    Socket::Socket(string_view interface_name): interface_name(interface_name)
+    Socket::Socket(const string_view interface_name): interface_name(interface_name)
     {
-        s = interface_logger.get_sink(format("HyCAN Socket_{}", interface_name));
-        XTR_LOGL(info, s, "Creating socket for {}", interface_name);
-    }
+    };
 
     Socket::~Socket()
     {
         close(sock_fd);
     }
 
-    bool Socket::ensure_connected()
+    Result Socket::ensure_connected() noexcept
     {
         if (sock_fd > 0)
         {
@@ -31,8 +32,7 @@ namespace HyCAN
         sock_fd = socket(PF_CAN, SOCK_RAW, CAN_RAW);
         if (sock_fd == -1)
         {
-            XTR_LOGL(error, s, "Failed to create CAN socket: {}", strerror(errno));
-            return false;
+            return unexpected(format("Failed to create CAN socket: {}", strerror(errno)));
         }
         ifreq ifr{};
         const auto name_len = std::min(interface_name.size(), static_cast<size_t>(IFNAMSIZ - 1));
@@ -42,8 +42,8 @@ namespace HyCAN
         {
             close(sock_fd);
             sock_fd = -1;
-            XTR_LOGL(error, s, "Failed to get CAN interface '{}' index: {}", ifr.ifr_ifrn.ifrn_name, strerror(errno));
-            return false;
+            return unexpected(format("Failed to get CAN interface '{}' index: {}", ifr.ifr_ifrn.ifrn_name,
+                                     strerror(errno)));
         }
 
         sockaddr_can addr = {
@@ -55,21 +55,19 @@ namespace HyCAN
         {
             close(sock_fd);
             sock_fd = -1;
-            XTR_LOGL(error, s, "Failed to bind CAN socket: {}", strerror(errno));
-            return false;
+            return unexpected(format("Failed to bind CAN socket: {}", strerror(errno)));
         }
 
         const int flags = fcntl(sock_fd, F_GETFL, 0);
         fcntl(sock_fd, F_SETFL, flags | O_NONBLOCK);
-        return true;
+        return {};
     }
 
-    void Socket::flush()
+    Result Socket::flush() const noexcept
     {
         if (sock_fd < 0)
         {
-            XTR_LOGL(error, s, "Cannot flush with invalid socket descriptor");
-            return;
+            return unexpected("Cannot flush with invalid socket descriptor");
         }
         can_frame frame{};
         while (true)
@@ -83,8 +81,9 @@ namespace HyCAN
             }
             else
             {
-                XTR_LOGL(error, s, "Failed to flush linux buffer: {}", strerror(errno));
+                return unexpected(format("Failed to flush linux buffer: {}", strerror(errno)));
             }
         }
+        return {};
     }
 }

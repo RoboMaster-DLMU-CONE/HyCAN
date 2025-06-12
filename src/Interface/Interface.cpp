@@ -1,5 +1,5 @@
-#include "hycan/Interface/Interface.hpp"
-#include "hycan/Interface/Logger.hpp"
+#include "HyCAN/Interface/Interface.hpp"
+using std::string, std::unexpected;
 
 namespace HyCAN
 {
@@ -8,18 +8,23 @@ namespace HyCAN
                                                         reaper(this->interface_name),
                                                         sender(this->interface_name)
     {
-        s = interface_logger.get_sink(format("HyCAN Interface_{}", this->interface_name));
     }
 
-    void Interface::up()
+    Result Interface::up()
     {
-        netlink.up();
-        reaper.start();
+        if (const auto result = netlink.up(); !result)
+        {
+            return unexpected(result.error());
+        }
+        return reaper.start();
     }
 
-    void Interface::down()
+    Result Interface::down()
     {
-        netlink.down();
-        reaper.stop();
+        if (const auto result = netlink.down(); !result)
+        {
+            return unexpected(result.error());
+        }
+        return reaper.stop();
     }
 }

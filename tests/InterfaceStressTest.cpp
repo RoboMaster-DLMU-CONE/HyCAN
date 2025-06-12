@@ -12,8 +12,7 @@
 #include <linux/can.h>
 
 
-#include "hycan/Interface/Interface.hpp" // Adjust path if necessary
-#include "hycan/Interface/Logger.hpp"    // For sink, if direct logging is needed
+#include "HyCAN/Interface/Interface.hpp" // Adjust path if necessary
 
 // --- Test Configuration ---
 constexpr int NUM_INTERFACES = 10;
@@ -63,7 +62,7 @@ void sender_worker_fn(
     std::array<std::string, NUM_INTERFACES> names;
     for (int i = 0; i < NUM_INTERFACES; i++)
     {
-        names[i] = format("vcan_stress_{}", i);
+        names[i] = std::format("vcan_stress_{}", i);
         senders[i] = std::make_unique<HyCAN::Sender>(HyCAN::Sender(names[i]));
     }
     uint64_t messages_sent_by_this_thread = 0;
@@ -87,7 +86,10 @@ void sender_worker_fn(
 
         if (senders[interface_rr_index])
         {
-            senders[interface_rr_index]->send(frame_to_send);
+            if (const auto result = senders[interface_rr_index]->send(frame_to_send); !result)
+            {
+                std::cerr << result.error() << std::endl;
+            }
             messages_sent_by_this_thread++;
         }
 
@@ -149,7 +151,12 @@ int main()
                 stress_test_callback(std::move(frame), i, target_can_id);
             };
 
-            interface_ptr->tryRegisterCallback<can_frame>({target_can_id}, callback_for_interface);
+            if (const auto result = interface_ptr->tryRegisterCallback<can_frame>(
+                    {target_can_id}, callback_for_interface);
+                !result)
+            {
+                std::cerr << result.error() << std::endl;
+            }
 
             std::cout << "Callback registered for " << if_name << " on ID 0x" << std::hex << target_can_id << std::dec
                 << std::endl;
@@ -175,7 +182,7 @@ int main()
             std::cout << "Bringing UP " << if_name << "..." << std::endl;
             try
             {
-                hycan_interfaces[i]->up();
+                [[maybe_unused]] auto _ = hycan_interfaces[i]->up();
             }
             catch (const std::exception& e)
             {
@@ -226,7 +233,10 @@ int main()
             std::cout << "Bringing DOWN " << if_name << "..." << std::endl;
             try
             {
-                hycan_interfaces[i]->down();
+                if (const auto result = hycan_interfaces[i]->down(); !result)
+                {
+                    std::cerr << result.error() << std::endl;
+                }
             }
             catch (const std::exception& e)
             {

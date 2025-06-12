@@ -3,14 +3,13 @@
 #include <thread>
 #include <chrono>
 #include <atomic>
-#include <functional>
 #include <iomanip> // For printing frame data
 #include <optional> // To store received frame
 #include <array>  // For std::array
 #include <cstring> // For std::memcpy in frame construction if needed
 
 #include <linux/can.h>
-#include "hycan/Interface/Interface.hpp" // Adjust path if necessary
+#include "HyCAN/Interface/Interface.hpp" // Adjust path if necessary
 
 // Test constants
 const std::string TEST_INTERFACE_NAME = "vcan_hytest"; // Unique vcan interface name for this test
@@ -19,7 +18,7 @@ constexpr __u8 TEST_DLC = 8;
 const std::array<__u8, TEST_DLC> TEST_DATA = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
 
 // Globals for callback verification
-std::atomic<bool> g_callback_triggered{false};
+std::atomic g_callback_triggered{false};
 std::optional<can_frame> g_received_frame;
 // std::mutex g_frame_mutex; // Potentially needed for more complex scenarios
 
@@ -80,16 +79,29 @@ int main()
     g_callback_triggered.store(false, std::memory_order_relaxed);
     g_received_frame.reset();
 
-    interface.tryRegisterCallback<can_frame>({TEST_CAN_ID}, test_can_callback);
+    if (const auto result = interface.tryRegisterCallback<can_frame>({TEST_CAN_ID}, test_can_callback); !result)
+    {
+        std::cerr << "FAIL: " << result.error();
+        result_code = EXIT_FAILURE;
+    }
 
     // --- Test 1: Interface UP and Send/Receive ---
     std::cout << "\nTEST 1: Bringing interface UP and testing send/receive..." << std::endl;
-    interface.up();
+    if (const auto result = interface.up(); !result)
+    {
+        std::cerr << "FAIL: " << result.error();
+        result_code = EXIT_FAILURE;
+    }
     std::cout << "Interface UP command issued. Waiting briefly for setup..." << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(300)); // Allow time for interface and reaper thread to start
 
     std::cout << "Sending CAN frame with ID 0x" << std::hex << TEST_CAN_ID << std::dec << "..." << std::endl;
-    interface.send(frame_to_send);
+
+    if (const auto result = interface.send(frame_to_send); !result)
+    {
+        std::cerr << "FAIL: " << result.error();
+        result_code = EXIT_FAILURE;
+    }
 
     std::cout << "Waiting for callback (up to 2 seconds)..." << std::endl;
     bool triggered_in_test1 = false;
@@ -135,7 +147,11 @@ int main()
 
     // --- Test 2: Interface DOWN and Verify No More Callbacks ---
     std::cout << "\nTEST 2: Bringing interface DOWN and verifying no messages are received..." << std::endl;
-    interface.down();
+    if (const auto result = interface.down(); !result)
+    {
+        std::cerr << "FAIL: " << result.error();
+        result_code = EXIT_FAILURE;
+    }
     std::cout << "Interface DOWN command issued. Waiting briefly for teardown..." << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(300)); // Allow time for reaper thread to stop
 
@@ -145,7 +161,10 @@ int main()
     std::cout << "Sending CAN frame again (interface should be down)..." << std::endl;
     // The send operation might log an error if the underlying socket is closed or interface is down.
     // The primary check is that the reaper thread (and thus callback) is no longer active.
-    interface.send(frame_to_send);
+    if (const auto result = interface.send(frame_to_send); !result)
+    {
+        std::cerr << "Detect Error: " << result.error() << std::endl;
+    }
 
     std::cout << "Waiting to see if callback is (incorrectly) triggered (1 second)..." << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(1)); // Wait to ensure no callback occurs

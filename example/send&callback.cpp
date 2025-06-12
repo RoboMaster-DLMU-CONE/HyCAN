@@ -3,13 +3,13 @@
 #include <iostream>
 #include <linux/can.h>
 
-#include "hycan/Interface/Interface.hpp"
+#include "HyCAN/Interface/Interface.hpp"
 
 using HyCAN::Interface;
 
 int main()
 {
-    const function callback = [](can_frame&& frame)
+    const std::function callback = [](can_frame&& frame)
     {
         std::cout << "CAN ID: 0x" << std::hex << frame.can_id
             << " DLC: " << std::dec << static_cast<int>(frame.len)
@@ -29,17 +29,17 @@ int main()
 
     Interface interface("vcan0");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    interface.tryRegisterCallback({0x100}, callback);
-    interface.up();
+    auto _ = interface.tryRegisterCallback({0x100}, callback);
+    _ = interface.up();
     std::this_thread::sleep_for(std::chrono::seconds(2));
     for (int i = 0; i < 5; ++i)
     {
-        interface.send(test_frame);
+        _ = interface.send(test_frame);
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 
     std::this_thread::sleep_for(std::chrono::seconds(4));
-    interface.down();
+    _ = interface.down();
     std::this_thread::sleep_for(std::chrono::seconds(2));
     return 0;
 }

@@ -12,7 +12,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y linux-modules-extra-$(uname -r)
+          sudo apt install -y pkg-config libnl-3-dev libnl-nf-3-dev linux-modules-extra-$(uname -r)
 
       - name: Load CAN Module
         run: |
@@ -22,21 +22,12 @@ jobs:
       - name: Setup cmake
         uses: lukka/get-cmake@latest
 
-      - name: Install Conan
-        uses: conan-io/setup-conan@v1
-
-      - name: Install Conan dependencies
-        run: |
-          conan profile detect --force
-          DEFAULT_PROFILE_PATH=$(conan profile path default)
-          sed -i "s|^compiler.cppstd=.*|compiler.cppstd=gnu20|" "$DEFAULT_PROFILE_PATH"
-          conan install . -of=build -s build_type=Release --build=missing
       - name: Build Project
         run: |
-          cmake --preset conan-release -G Ninja -DBUILD_HYCAN_TEST=ON -DTEST_HYCAN_LATENCY=ON
-          cmake --build --preset conan-release
+          cmake -S . -B build -G Ninja -DBUILD_HYCAN_TEST=ON -DTEST_HYCAN_LATENCY=ON
+          cmake --build build
 
       - name: Test Project
         run: |
-          cd build/Release
+          cd build
           sudo ctest --output-on-failure
