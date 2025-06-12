@@ -9,13 +9,14 @@ option(BUILD_HYCAN_EXAMPLE "Build hycan Examples" ON)
 option(BUILD_HYCAN_TEST "Build hycan Tests" ON)
 option(TEST_HYCAN_LATENCY "Adding Latency statistics for testing" ON)
 
-find_package(libnl REQUIRED)
+include(HyCANFindlibnl3)
 
 file(GLOB_RECURSE HYCAN_SOURCES src/*.cpp)
 add_library(hycan)
 target_sources(hycan PRIVATE ${HYCAN_SOURCES})
 target_include_directories(hycan PUBLIC include)
-target_link_libraries(hycan PUBLIC libnl::libnl)
+target_include_directories(hycan PRIVATE ${LIBNL3_INCLUDE_DIR})
+target_link_libraries(hycan PUBLIC ${LIBNL3_LIBRARIES})
 
 if (BUILD_HYCAN_EXAMPLE)
     include(HyCANExamples)
