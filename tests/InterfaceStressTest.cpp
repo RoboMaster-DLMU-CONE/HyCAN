@@ -12,7 +12,7 @@
 #include <linux/can.h>
 
 
-#include "hycan/Interface/Interface.hpp" // Adjust path if necessary
+#include "HyCAN/Interface/Interface.hpp" // Adjust path if necessary
 
 // --- Test Configuration ---
 constexpr int NUM_INTERFACES = 10;

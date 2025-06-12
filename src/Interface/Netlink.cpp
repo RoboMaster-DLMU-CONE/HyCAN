@@ -1,5 +1,5 @@
-#include "hycan/Interface/Netlink.hpp"
-#include "hycan/Interface/VCAN.hpp"
+#include "HyCAN/Interface/Netlink.hpp"
+#include "HyCAN/Interface/VCAN.hpp"
 
 #include <net/if.h>
 

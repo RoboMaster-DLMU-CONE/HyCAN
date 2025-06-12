@@ -3,7 +3,7 @@
 #include <iostream>
 #include <linux/can.h>
 
-#include "hycan/Interface/Interface.hpp"
+#include "HyCAN/Interface/Interface.hpp"
 
 using HyCAN::Interface;
 

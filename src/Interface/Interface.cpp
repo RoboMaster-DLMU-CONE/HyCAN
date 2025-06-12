@@ -1,4 +1,4 @@
-#include "hycan/Interface/Interface.hpp"
+#include "HyCAN/Interface/Interface.hpp"
 using std::string, std::unexpected;
 
 namespace HyCAN

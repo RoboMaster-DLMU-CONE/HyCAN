@@ -1,4 +1,4 @@
-#include "hycan/Interface/Socket.hpp"
+#include "HyCAN/Interface/Socket.hpp"
 
 #include <cstring>
 #include <fcntl.h>

@@ -1,4 +1,4 @@
-#include "hycan/Interface/Sender.hpp"
+#include "HyCAN/Interface/Sender.hpp"
 
 namespace HyCAN
 {

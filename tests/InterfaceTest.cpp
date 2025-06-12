@@ -3,14 +3,13 @@
 #include <thread>
 #include <chrono>
 #include <atomic>
-#include <functional>
 #include <iomanip> // For printing frame data
 #include <optional> // To store received frame
 #include <array>  // For std::array
 #include <cstring> // For std::memcpy in frame construction if needed
 
 #include <linux/can.h>
-#include "hycan/Interface/Interface.hpp" // Adjust path if necessary
+#include "HyCAN/Interface/Interface.hpp" // Adjust path if necessary
 
 // Test constants
 const std::string TEST_INTERFACE_NAME = "vcan_hytest"; // Unique vcan interface name for this test

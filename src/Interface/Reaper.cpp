@@ -1,4 +1,4 @@
-#include "hycan/Interface/Reaper.hpp"
+#include "HyCAN/Interface/Reaper.hpp"
 
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
