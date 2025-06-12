@@ -4,34 +4,35 @@
 #include <netlink/netlink.h>
 #include <netlink/route/link.h>
 
+using std::unexpected, std::format;
+
 namespace HyCAN
 {
-    void create_vcan_interface_if_not_exists(const string_view interface_name, sink& s)
+    Result create_vcan_interface_if_not_exists(const std::string_view interface_name) noexcept
     {
         if (if_nametoindex(interface_name.data()) != 0)
         {
-            XTR_LOGL(debug, s, "{} already exists.", interface_name);
-            return; // Already exists
+            return {}; // already exist.
         }
         if (errno != ENODEV) // if_nametoindex failed for a reason other than "No such device"
         {
-            XTR_LOGL(error, s, "Error checking interface '{}' before creation: {}", interface_name, strerror(errno));
-            return;
+            return unexpected(format("Error checking interface '{}' before creation: {}", interface_name,
+                                     strerror(errno)));
         }
 
-        XTR_LOGL(info, s, "{} not exist, creating VCAN for it", interface_name);
+        // Creating VCAN for Interface.
 
         nl_sock* sock;
         rtnl_link* link;
         if (sock = nl_socket_alloc(); !sock)
         {
-            XTR_LOGL(fatal, s, "Error: Cannot alloc nl_socket.");
+            return unexpected("Error: Cannot alloc nl_socket.");
         }
 
         if (nl_connect(sock, NETLINK_ROUTE) < 0)
         {
             nl_socket_free(sock);
-            XTR_LOGL(fatal, s, "Error: Cannot connected to nl_socket.");
+            return unexpected("Error: Cannot connected to nl_socket.");
         }
 
 
@@ -39,7 +40,7 @@ namespace HyCAN
         {
             nl_close(sock);
             nl_socket_free(sock);
-            XTR_LOGL(fatal, s, "Error: Cannot alloc rtnl_link.");
+            return unexpected("Error: Cannot alloc rtnl_link.");
         }
 
         rtnl_link_set_name(link, interface_name.data());
@@ -50,10 +51,11 @@ namespace HyCAN
             rtnl_link_put(link);
             nl_close(sock);
             nl_socket_free(sock);
-            XTR_LOGL(fatal, s, "Error: Cannot create interface: {}.", nl_geterror(err));
+            return unexpected(format("Error: Cannot create interface: {}.", nl_geterror(err)));
         }
         rtnl_link_put(link);
         nl_close(sock);
         nl_socket_free(sock);
+        return {};
     }
 }

@@ -67,7 +67,6 @@ class HyCANConan(ConanFile):
         cmake_layout(self, build_folder=".")
 
     def requirements(self):
-        self.requires("xtr/2.1.2", transitive_headers=True)
         self.requires("libnl/3.9.0")
 
     def generate(self):

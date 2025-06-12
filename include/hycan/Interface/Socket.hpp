@@ -1,27 +1,25 @@
 #ifndef HYCAN_SOCKET_HPP
 #define HYCAN_SOCKET_HPP
 
-#include <string_view>
-#include <xtr/logger.hpp>
+#include <string>
+#include <expected>
 
-using std::string_view;
-using xtr::sink;
+using Result = std::expected<void, std::string>;
 
 namespace HyCAN
 {
     class Socket
     {
     public:
-        explicit Socket(string_view interface_name);
+        explicit Socket(std::string_view interface_name);
         Socket() = delete;
         ~Socket();
-        bool ensure_connected();
-        void flush();
+        Result ensure_connected() noexcept;
+        [[nodiscard]] Result flush() const noexcept;
         int sock_fd{};
 
     private:
-        string_view interface_name;
-        sink s;
+        std::string_view interface_name;
     };
 }
 

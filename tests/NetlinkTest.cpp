@@ -2,7 +2,6 @@
 #include <string_view>
 #include <string>
 #include <cstdlib>
-#include <cerrno>
 #include <cstring>
 #include <sys/socket.h>
 #include <net/if.h>
@@ -49,7 +48,11 @@ int main()
 
     // --- Test 1: Set Virtual Interface UP ---
     std::cout << "\nTEST 1: Bringing UP virtual interface '" << test_interface_name << "'..." << std::endl;
-    netlink.up();
+    if (const auto result = netlink.up(); !result)
+    {
+        std::cerr << "FAIL: " << result.error() << std::endl;
+        test_result_code = EXIT_FAILURE;
+    }
     std::cout << "PASS: Netlink::up for '" << test_interface_name << "' succeeded." << std::endl;
 
     // existence & state check after up()
@@ -66,7 +69,11 @@ int main()
 
     // --- Test 2: Set Interface DOWN ---
     std::cout << "\nTEST 2: Bringing DOWN interface '" << test_interface_name << "'..." << std::endl;
-    netlink.down();
+    if (const auto result = netlink.down(); !result)
+    {
+        std::cerr << "FAIL: " << result.error() << std::endl;
+        test_result_code = EXIT_FAILURE;
+    }
     std::cout << "PASS: Netlink::down for '" << test_interface_name << "' succeeded." << std::endl;
 
     // existence & state check after down()

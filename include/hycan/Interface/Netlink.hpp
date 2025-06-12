@@ -1,26 +1,26 @@
 #ifndef NETLINK_HPP
 #define NETLINK_HPP
 
-#include <xtr/logger.hpp>
+#include <expected>
+#include <string>
+#include <format>
 
-using std::format, std::string_view, std::string;
-using xtr::logger, xtr::sink;
+using Result = std::expected<void, std::string>;
 
 namespace HyCAN
 {
     class Netlink
     {
     public:
-        explicit Netlink(string_view interface_name);
+        explicit Netlink(std::string_view interface_name);
         Netlink() = delete;
-        void up();
-        void down();
+        Result up() noexcept;
+        Result down() noexcept;
 
     private:
         template <bool state>
-        void set_sock();
-        string_view interface_name;
-        sink s;
+        Result set_sock() noexcept;
+        std::string_view interface_name;
     };
 }
 

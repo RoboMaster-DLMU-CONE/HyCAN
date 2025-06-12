@@ -1,6 +1,7 @@
 #ifndef REAPER_HPP
 #define REAPER_HPP
 
+#include <format>
 #include <thread>
 #include <functional>
 #include <string>
@@ -8,15 +9,8 @@
 
 #include <linux/can.h>
 
-#include <xtr/logger.hpp>
-
 #include "Socket.hpp"
 #include "CanFrameConvertible.hpp"
-
-using std::string_view, std::function, std::format, std::jthread, std::stop_token,
-    std::atomic,
-    std::string, std::set;
-using xtr::sink, xtr::logger;
 
 static constexpr size_t MAX_EPOLL_EVENT = 2048;
 
@@ -25,7 +19,7 @@ namespace HyCAN
     class Reaper
     {
     public:
-        explicit Reaper(string_view interface_name);
+        explicit Reaper(std::string_view interface_name);
         Reaper() = delete;
         Reaper(const Reaper& other) = delete;
         Reaper(Reaper&& other) = delete;
@@ -33,13 +27,17 @@ namespace HyCAN
         Reaper& operator=(const Reaper& other) = delete;
         Reaper& operator=(Reaper&& other) noexcept = delete;
 
-        void start();
-        void stop();
+        Result start() noexcept;
+        Result stop() noexcept;
 
         template <CanFrameConvertible T = can_frame>
-        void tryRegisterFunc(const set<size_t>& can_ids, function<void(T&&)> func)
+        Result tryRegisterFunc(const std::set<size_t>& can_ids, std::function<void(T&&)> func)
         {
-            function<void(can_frame&&)> register_func;
+            if (!func)
+            {
+                return std::unexpected("Provided callback function is empty");
+            }
+            std::function<void(can_frame&&)> register_func;
             if constexpr (std::is_same<T, can_frame>())
             {
                 register_func = std::move(func);
@@ -56,19 +54,15 @@ namespace HyCAN
             {
                 if (id >= 2048)
                 {
-                    XTR_LOGL(error, s, "CAN ID {} exceeds maximum limit of 2047", id);
-                    return;
-                }
-                if (!func)
-                {
-                    XTR_LOGL(error, s, "Provided callback function is empty");
+                    return std::unexpected(std::format("CAN ID {} exceeds maximum limit of 2047", id));
                 }
                 if (reap_thread.joinable())
                 {
-                    XTR_LOGL(error, s, "Reaper thread is running.");
+                    return std::unexpected("Reaper thread is running.");
                 }
                 funcs[id] = std::move(register_func);
             }
+            return {};
         }
 
 #ifdef HYCAN_LATENCY_TEST
@@ -83,21 +77,20 @@ namespace HyCAN
 #endif
 
     private:
-        void reap_process(const stop_token& stop_token);
-        void epoll_fd_add_sock_fd(int sock_fd);
+        void reap_process(const std::stop_token& stop_token) const;
+        Result epoll_fd_add_sock_fd(int sock_fd) const noexcept;
 
         Socket socket;
         int thread_event_fd{-1};
         int epoll_fd{-1};
         uint8_t cpu_core{};
-        function<void(can_frame&&)> funcs[2048]{};
-        sink s;
-        string_view interface_name;
-        jthread reap_thread;
+        std::function<void(can_frame&&)> funcs[2048]{};
+        std::string_view interface_name;
+        std::jthread reap_thread;
 
 #ifdef HYCAN_LATENCY_TEST
-        mutable atomic<uint64_t> accumulated_latency_ns{0};
-        mutable atomic<uint64_t> latency_message_count{0};
+        mutable std::atomic<uint64_t> accumulated_latency_ns{0};
+        mutable std::atomic<uint64_t> latency_message_count{0};
 #endif
     };
 }

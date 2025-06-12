@@ -3,31 +3,31 @@
 
 #include <string>
 #include <set>
-#include <xtr/logger.hpp>
+#include <expected>
 #include "CanFrameConvertible.hpp"
 #include "Netlink.hpp"
 #include "Reaper.hpp"
 #include "Sender.hpp"
 
-using std::string, std::set;
+using Result = std::expected<void, std::string>;
 
 namespace HyCAN
 {
     class Interface
     {
     public:
-        explicit Interface(const string& interface_name);
+        explicit Interface(const std::string& interface_name);
         Interface() = delete;
-        void up();
-        void down();
+        Result up();
+        Result down();
 
         template <CanFrameConvertible T>
-        void send(T frame) { sender.send(std::move(frame)); };
+        Result send(T frame) { return sender.send(std::move(frame)); };
 
         template <CanFrameConvertible T = can_frame>
-        void tryRegisterCallback(const set<size_t>& can_ids, const function<void(T&&)>& func)
+        Result tryRegisterCallback(const std::set<size_t>& can_ids, const std::function<void(T&&)>& func)
         {
-            reaper.tryRegisterFunc<T>(can_ids, func);
+            return reaper.tryRegisterFunc<T>(can_ids, func);
         }
 #ifdef HYCAN_LATENCY_TEST
         Reaper::LatencyStats get_reaper_latency_stats() const
@@ -41,7 +41,6 @@ namespace HyCAN
         Netlink netlink;
         Reaper reaper;
         Sender sender;
-        sink s;
     };
 }
 

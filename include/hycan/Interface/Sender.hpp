@@ -1,28 +1,29 @@
 #ifndef SENDER_HPP
 #define SENDER_HPP
 
+#include <cstring>
+#include <format>
 #include <string_view>
-
-#include <xtr/logger.hpp>
+#include <unistd.h>
 
 #include "CanFrameConvertible.hpp"
 #include "Socket.hpp"
-
-using std::string_view;
-using xtr::sink;
 
 namespace HyCAN
 {
     class Sender
     {
     public:
-        explicit Sender(string_view interface_name);
+        explicit Sender(std::string_view interface_name);
         Sender() = delete;
 
         template <CanFrameConvertible T>
-        void send(T frame)
+        Result send(T frame) noexcept
         {
-            socket.ensure_connected();
+            if (const auto socket_result = socket.ensure_connected(); !socket_result)
+            {
+                return std::unexpected(socket_result.error());
+            }
             ssize_t result;
             if constexpr (std::is_same<T, can_frame>())
             {
@@ -35,14 +36,14 @@ namespace HyCAN
             }
             if (result == -1)
             {
-                XTR_LOGL(error, s, "Failed to send CAN message: {}", strerror(errno));
+                return std::unexpected(std::format("Failed to send CAN message: {}", strerror(errno)));
             }
+            return {};
         };
 
     private:
         Socket socket;
-        string_view interface_name;
-        sink s;
+        std::string_view interface_name;
     };
 }
 
