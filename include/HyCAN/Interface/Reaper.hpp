@@ -56,9 +56,10 @@ namespace HyCAN
                 {
                     return std::unexpected(std::format("CAN ID {} exceeds maximum limit of 2047", id));
                 }
-                if (reap_thread.joinable())
+                if (funcs[id] && reap_thread.joinable())
                 {
-                    return std::unexpected("Reaper thread is running.");
+                    return std::unexpected(
+                        "Reaper thread is running. Please stop it before Re-registering existing function.");
                 }
                 funcs[id] = std::move(register_func);
             }
