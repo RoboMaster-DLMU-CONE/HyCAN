@@ -117,7 +117,7 @@ namespace HyCAN
         return {};
     }
 
-    void Reaper::reap_process(const std::stop_token& stop_token) const
+    void Reaper::reap_process(const std::stop_token& stop_token)
     {
         [[maybe_unused]] auto _ = lock_memory();
         _ = make_real_time();
@@ -162,10 +162,13 @@ namespace HyCAN
                         }
 
 #endif
+
+                        lock_.lock();
                         if (funcs[frame.can_id])
                         {
                             funcs[frame.can_id](std::move(frame));
                         }
+                        lock_.unlock();
                     }
                 }
             }

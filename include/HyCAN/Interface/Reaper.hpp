@@ -11,6 +11,7 @@
 
 #include "Socket.hpp"
 #include "CanFrameConvertible.hpp"
+#include "HyCAN/Util/SpinLock.hpp"
 
 static constexpr size_t MAX_EPOLL_EVENT = 2048;
 
@@ -49,20 +50,16 @@ namespace HyCAN
                     func(static_cast<T>(frame));
                 };
             }
-
+            lock_.lock();
             for (auto id : can_ids)
             {
                 if (id >= 2048)
                 {
                     return std::unexpected(std::format("CAN ID {} exceeds maximum limit of 2047", id));
                 }
-                if (funcs[id] && reap_thread.joinable())
-                {
-                    return std::unexpected(
-                        "Reaper thread is running. Please stop it before Re-registering existing function.");
-                }
-                funcs[id] = std::move(register_func);
+                funcs[id] = register_func;
             }
+            lock_.unlock();
             return {};
         }
 
@@ -78,7 +75,7 @@ namespace HyCAN
 #endif
 
     private:
-        void reap_process(const std::stop_token& stop_token) const;
+        void reap_process(const std::stop_token& stop_token);
         Result epoll_fd_add_sock_fd(int sock_fd) const noexcept;
 
         Socket socket;
@@ -88,6 +85,7 @@ namespace HyCAN
         std::function<void(can_frame&&)> funcs[2048]{};
         std::string_view interface_name;
         std::jthread reap_thread;
+        Util::SpinLock lock_;
 
 #ifdef HYCAN_LATENCY_TEST
         mutable std::atomic<uint64_t> accumulated_latency_ns{0};
