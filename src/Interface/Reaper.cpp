@@ -14,6 +14,8 @@ static std::atomic<uint8_t> thread_counter;
 
 using std::unexpected, std::format, std::jthread;
 
+using Result = std::expected<void, std::string>;
+
 inline Result lock_memory()
 {
     if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0)

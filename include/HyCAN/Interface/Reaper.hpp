@@ -19,6 +19,8 @@ namespace HyCAN
 {
     class Reaper
     {
+        using Result = std::expected<void, std::string>;
+
     public:
         explicit Reaper(std::string_view interface_name);
         Reaper() = delete;

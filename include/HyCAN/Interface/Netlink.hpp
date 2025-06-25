@@ -5,12 +5,12 @@
 #include <string>
 #include <format>
 
-using Result = std::expected<void, std::string>;
-
 namespace HyCAN
 {
     class Netlink
     {
+        using Result = std::expected<void, std::string>;
+
     public:
         explicit Netlink(std::string_view interface_name);
         Netlink() = delete;

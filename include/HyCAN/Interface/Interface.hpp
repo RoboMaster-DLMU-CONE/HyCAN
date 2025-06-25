@@ -9,12 +9,13 @@
 #include "Reaper.hpp"
 #include "Sender.hpp"
 
-using Result = std::expected<void, std::string>;
 
 namespace HyCAN
 {
     class Interface
     {
+        using Result = std::expected<void, std::string>;
+
     public:
         explicit Interface(const std::string& interface_name);
         Interface() = delete;

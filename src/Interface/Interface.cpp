@@ -1,5 +1,6 @@
 #include "HyCAN/Interface/Interface.hpp"
 using std::string, std::unexpected;
+using Result = std::expected<void, std::string>;
 
 namespace HyCAN
 {

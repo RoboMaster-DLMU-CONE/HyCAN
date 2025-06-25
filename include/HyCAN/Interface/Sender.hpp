@@ -13,6 +13,8 @@ namespace HyCAN
 {
     class Sender
     {
+        using Result = std::expected<void, std::string>;
+
     public:
         explicit Sender(std::string_view interface_name);
         Sender() = delete;

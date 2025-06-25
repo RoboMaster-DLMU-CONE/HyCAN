@@ -4,12 +4,12 @@
 #include <string>
 #include <expected>
 
-using Result = std::expected<void, std::string>;
-
 namespace HyCAN
 {
     class Socket
     {
+        using Result = std::expected<void, std::string>;
+
     public:
         explicit Socket(std::string_view interface_name);
         Socket() = delete;

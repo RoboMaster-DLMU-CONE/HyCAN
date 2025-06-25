@@ -10,6 +10,7 @@
 #include <net/if.h>
 
 using std::unexpected, std::format, std::string_view;
+using Result = std::expected<void, std::string>;
 
 namespace HyCAN
 {
