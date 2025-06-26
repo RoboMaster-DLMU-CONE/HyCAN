@@ -1,6 +1,10 @@
 name: Test HyCAN
 on:
   push:
+    tags:
+      - 'v*'
+
+  workflow_dispatch:
 jobs:
   test-project:
     name: Run CTest
