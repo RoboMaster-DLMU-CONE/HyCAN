@@ -1,11 +1,13 @@
 #ifndef REAPER_HPP
 #define REAPER_HPP
 
-#include <format>
 #include <thread>
 #include <functional>
 #include <string>
 #include <set>
+#include <format>
+
+#include <tl/expected.hpp>
 
 #include <linux/can.h>
 
@@ -19,8 +21,6 @@ namespace HyCAN
 {
     class Reaper
     {
-        using Result = std::expected<void, std::string>;
-
     public:
         explicit Reaper(std::string_view interface_name);
         Reaper() = delete;
@@ -30,15 +30,15 @@ namespace HyCAN
         Reaper& operator=(const Reaper& other) = delete;
         Reaper& operator=(Reaper&& other) noexcept = delete;
 
-        Result start() noexcept;
-        Result stop() noexcept;
+        tl::expected<void, std::string> start() noexcept;
+        tl::expected<void, std::string> stop() noexcept;
 
         template <CanFrameConvertible T = can_frame>
-        Result tryRegisterFunc(const std::set<size_t>& can_ids, std::function<void(T&&)> func)
+        tl::expected<void, std::string> tryRegisterFunc(const std::set<size_t>& can_ids, std::function<void(T&&)> func)
         {
             if (!func)
             {
-                return std::unexpected("Provided callback function is empty");
+                return tl::unexpected("Provided callback function is empty");
             }
             std::function<void(can_frame&&)> register_func;
             if constexpr (std::is_same<T, can_frame>())
@@ -57,7 +57,7 @@ namespace HyCAN
             {
                 if (id >= 2048)
                 {
-                    return std::unexpected(std::format("CAN ID {} exceeds maximum limit of 2047", id));
+                    return tl::unexpected(std::format("CAN ID {} exceeds maximum limit of 2047", id));
                 }
                 funcs[id] = register_func;
             }
@@ -78,7 +78,7 @@ namespace HyCAN
 
     private:
         void reap_process(const std::stop_token& stop_token);
-        Result epoll_fd_add_sock_fd(int sock_fd) const noexcept;
+        tl::expected<void, std::string> epoll_fd_add_sock_fd(int sock_fd) const noexcept;
 
         Socket socket;
         int thread_event_fd{-1};

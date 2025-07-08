@@ -2,20 +2,19 @@
 #define HYCAN_SOCKET_HPP
 
 #include <string>
-#include <expected>
+
+#include <tl/expected.hpp>
 
 namespace HyCAN
 {
     class Socket
     {
-        using Result = std::expected<void, std::string>;
-
     public:
         explicit Socket(std::string_view interface_name);
         Socket() = delete;
         ~Socket();
-        Result ensure_connected() noexcept;
-        [[nodiscard]] Result flush() const noexcept;
+        tl::expected<void, std::string> ensure_connected() noexcept;
+        [[nodiscard]] tl::expected<void, std::string> flush() const noexcept;
         int sock_fd{};
 
     private:

@@ -9,8 +9,7 @@
 #include <linux/can.h>
 #include <net/if.h>
 
-using std::unexpected, std::format, std::string_view;
-using Result = std::expected<void, std::string>;
+using tl::unexpected, std::format, std::string_view;
 
 namespace HyCAN
 {
@@ -23,7 +22,7 @@ namespace HyCAN
         close(sock_fd);
     }
 
-    Result Socket::ensure_connected() noexcept
+    tl::expected<void, std::string> Socket::ensure_connected() noexcept
     {
         if (sock_fd > 0)
         {
@@ -64,7 +63,7 @@ namespace HyCAN
         return {};
     }
 
-    Result Socket::flush() const noexcept
+    tl::expected<void, std::string> Socket::flush() const noexcept
     {
         if (sock_fd < 0)
         {

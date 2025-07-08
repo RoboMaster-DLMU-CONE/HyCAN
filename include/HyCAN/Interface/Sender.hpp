@@ -13,18 +13,16 @@ namespace HyCAN
 {
     class Sender
     {
-        using Result = std::expected<void, std::string>;
-
     public:
         explicit Sender(std::string_view interface_name);
         Sender() = delete;
 
         template <CanFrameConvertible T>
-        Result send(T frame) noexcept
+        tl::expected<void, std::string> send(T frame) noexcept
         {
             if (const auto socket_result = socket.ensure_connected(); !socket_result)
             {
-                return std::unexpected(socket_result.error());
+                return tl::unexpected(socket_result.error());
             }
             ssize_t result;
             if constexpr (std::is_same<T, can_frame>())
@@ -38,7 +36,7 @@ namespace HyCAN
             }
             if (result == -1)
             {
-                return std::unexpected(std::format("Failed to send CAN message: {}", strerror(errno)));
+                return tl::unexpected(std::format("Failed to send CAN message: {}", strerror(errno)));
             }
             return {};
         };
