@@ -1,5 +1,5 @@
-#ifndef ERROR_HPP
-#define ERROR_HPP
+#ifndef HYCAN_ERROR_HPP
+#define HYCAN_ERROR_HPP
 
 namespace HyCAN
 {
@@ -47,4 +47,4 @@ namespace HyCAN
         std::string message;
     };
 }
-#endif //ERROR_HPP
+#endif //HYCAN_ERROR_HPP
