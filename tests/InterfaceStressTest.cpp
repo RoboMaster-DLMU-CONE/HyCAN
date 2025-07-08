@@ -86,10 +86,10 @@ void sender_worker_fn(
 
         if (senders[interface_rr_index])
         {
-            if (const auto result = senders[interface_rr_index]->send(frame_to_send); !result)
+            senders[interface_rr_index]->send(frame_to_send).or_else([&](const auto& e)
             {
-                std::cerr << result.error() << std::endl;
-            }
+                std::cerr << e.message << std::endl;
+            });
             messages_sent_by_this_thread++;
         }
 
@@ -151,12 +151,11 @@ int main()
                 stress_test_callback(std::move(frame), i, target_can_id);
             };
 
-            if (const auto result = interface_ptr->tryRegisterCallback<can_frame>(
-                    {target_can_id}, callback_for_interface);
-                !result)
+            interface_ptr->tryRegisterCallback<can_frame>(
+                {target_can_id}, callback_for_interface).or_else([&](const auto& e)
             {
-                std::cerr << result.error() << std::endl;
-            }
+                std::cerr << e.message << std::endl;
+            });
 
             std::cout << "Callback registered for " << if_name << " on ID 0x" << std::hex << target_can_id << std::dec
                 << std::endl;
@@ -233,10 +232,10 @@ int main()
             std::cout << "Bringing DOWN " << if_name << "..." << std::endl;
             try
             {
-                if (const auto result = hycan_interfaces[i]->down(); !result)
+                hycan_interfaces[i]->down().or_else([&](const auto& e)
                 {
-                    std::cerr << result.error() << std::endl;
-                }
+                    std::cerr << e.message << std::endl;
+                });
             }
             catch (const std::exception& e)
             {

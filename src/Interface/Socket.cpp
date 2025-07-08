@@ -9,8 +9,7 @@
 #include <linux/can.h>
 #include <net/if.h>
 
-using std::unexpected, std::format, std::string_view;
-using Result = std::expected<void, std::string>;
+using tl::unexpected, std::format, std::string_view;
 
 namespace HyCAN
 {
@@ -23,7 +22,7 @@ namespace HyCAN
         close(sock_fd);
     }
 
-    Result Socket::ensure_connected() noexcept
+    tl::expected<void, Error> Socket::ensure_connected() noexcept
     {
         if (sock_fd > 0)
         {
@@ -33,7 +32,9 @@ namespace HyCAN
         sock_fd = socket(PF_CAN, SOCK_RAW, CAN_RAW);
         if (sock_fd == -1)
         {
-            return unexpected(format("Failed to create CAN socket: {}", strerror(errno)));
+            return unexpected(Error{
+                ErrorCode::CANSocketCreateError, format("Failed to create CAN socket: {}", strerror(errno))
+            });
         }
         ifreq ifr{};
         const auto name_len = std::min(interface_name.size(), static_cast<size_t>(IFNAMSIZ - 1));
@@ -43,8 +44,10 @@ namespace HyCAN
         {
             close(sock_fd);
             sock_fd = -1;
-            return unexpected(format("Failed to get CAN interface '{}' index: {}", ifr.ifr_ifrn.ifrn_name,
-                                     strerror(errno)));
+            return unexpected(Error{
+                ErrorCode::CANInterfaceIndexError,
+                format("Failed to get CAN interface '{}' index: {}", ifr.ifr_ifrn.ifrn_name, strerror(errno))
+            });
         }
 
         sockaddr_can addr = {
@@ -56,7 +59,9 @@ namespace HyCAN
         {
             close(sock_fd);
             sock_fd = -1;
-            return unexpected(format("Failed to bind CAN socket: {}", strerror(errno)));
+            return unexpected(Error{
+                ErrorCode::CANSocketBindError, format("Failed to bind CAN socket: {}", strerror(errno))
+            });
         }
 
         const int flags = fcntl(sock_fd, F_GETFL, 0);
@@ -64,11 +69,11 @@ namespace HyCAN
         return {};
     }
 
-    Result Socket::flush() const noexcept
+    tl::expected<void, Error> Socket::flush() const noexcept
     {
         if (sock_fd < 0)
         {
-            return unexpected("Cannot flush with invalid socket descriptor");
+            return unexpected(Error{ErrorCode::CANInvalidSocketError, "Cannot flush with invalid socket descriptor"});
         }
         can_frame frame{};
         while (true)
@@ -82,7 +87,9 @@ namespace HyCAN
             }
             else
             {
-                return unexpected(format("Failed to flush linux buffer: {}", strerror(errno)));
+                return unexpected(Error{
+                    ErrorCode::CANFlushError, format("Failed to flush linux buffer: {}", strerror(errno))
+                });
             }
         }
         return {};

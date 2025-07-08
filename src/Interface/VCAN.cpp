@@ -1,14 +1,16 @@
 #include "HyCAN/Interface/VCAN.hpp"
+#include <format>
+
 #include <net/if.h>
 
 #include <netlink/netlink.h>
 #include <netlink/route/link.h>
 
-using std::unexpected, std::format;
+using tl::unexpected, std::format;
 
 namespace HyCAN
 {
-    Result create_vcan_interface_if_not_exists(const std::string_view interface_name) noexcept
+    tl::expected<void, Error> create_vcan_interface_if_not_exists(const std::string_view interface_name) noexcept
     {
         if (if_nametoindex(interface_name.data()) != 0)
         {
@@ -16,8 +18,11 @@ namespace HyCAN
         }
         if (errno != ENODEV) // if_nametoindex failed for a reason other than "No such device"
         {
-            return unexpected(format("Error checking interface '{}' before creation: {}", interface_name,
-                                     strerror(errno)));
+            return unexpected(Error{
+                ErrorCode::VCANCheckingError, format("Error checking interface '{}' before creation: {}",
+                                                     interface_name,
+                                                     strerror(errno))
+            });
         }
 
         // Creating VCAN for Interface.
@@ -26,13 +31,13 @@ namespace HyCAN
         rtnl_link* link;
         if (sock = nl_socket_alloc(); !sock)
         {
-            return unexpected("Error: Cannot alloc nl_socket.");
+            return unexpected(Error{ErrorCode::NlSocketAllocError, "Error: Cannot alloc nl_socket."});
         }
 
         if (nl_connect(sock, NETLINK_ROUTE) < 0)
         {
             nl_socket_free(sock);
-            return unexpected("Error: Cannot connected to nl_socket.");
+            return unexpected(Error{ErrorCode::NlConnectError, "Error: Cannot connected to nl_socket."});
         }
 
 
@@ -40,7 +45,7 @@ namespace HyCAN
         {
             nl_close(sock);
             nl_socket_free(sock);
-            return unexpected("Error: Cannot alloc rtnl_link.");
+            return unexpected(Error{ErrorCode::RtnlLinkAllocError, "Error: Cannot alloc rtnl_link."});
         }
 
         rtnl_link_set_name(link, interface_name.data());
@@ -51,7 +56,9 @@ namespace HyCAN
             rtnl_link_put(link);
             nl_close(sock);
             nl_socket_free(sock);
-            return unexpected(format("Error: Cannot create interface: {}.", nl_geterror(err)));
+            return unexpected(Error{
+                ErrorCode::RtnlLinkAddError, format("Error: Cannot create interface: {}.", nl_geterror(err))
+            });
         }
         rtnl_link_put(link);
         nl_close(sock);

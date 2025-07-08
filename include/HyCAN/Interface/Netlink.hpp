@@ -1,25 +1,25 @@
 #ifndef NETLINK_HPP
 #define NETLINK_HPP
 
-#include <expected>
 #include <string>
-#include <format>
+
+#include <tl/expected.hpp>
+
+#include "HyCAN/Util/Error.hpp"
 
 namespace HyCAN
 {
     class Netlink
     {
-        using Result = std::expected<void, std::string>;
-
     public:
         explicit Netlink(std::string_view interface_name);
         Netlink() = delete;
-        Result up() noexcept;
-        Result down() noexcept;
+        tl::expected<void, Error> up() noexcept;
+        tl::expected<void, Error> down() noexcept;
 
     private:
         template <bool state>
-        Result set_sock() noexcept;
+        tl::expected<void, Error> set_sock() noexcept;
         std::string_view interface_name;
     };
 }

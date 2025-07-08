@@ -12,31 +12,31 @@
 
 static std::atomic<uint8_t> thread_counter;
 
-using std::unexpected, std::format, std::jthread;
+using tl::unexpected, std::format, std::jthread;
+using HyCAN::Error;
+using enum HyCAN::ErrorCode;
 
-using Result = std::expected<void, std::string>;
-
-inline Result lock_memory()
+inline tl::expected<void, Error> lock_memory()
 {
     if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0)
     {
-        return unexpected(format("Failed to lock memory: {}", strerror(errno)));
+        return unexpected(Error(MemoryLockError, format("Failed to lock memory: {}", strerror(errno))));
     }
     return {};
 }
 
-inline Result make_real_time()
+inline tl::expected<void, Error> make_real_time()
 {
     sched_param param{};
     param.sched_priority = 80;
     if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &param) != 0)
     {
-        return unexpected(format("Failed to make thread real time: {}", strerror(errno)));
+        return unexpected(Error(ThreadRealTimeError, format("Failed to make thread real time: {}", strerror(errno))));
     }
     return {};
 }
 
-inline Result affinize_cpu(const uint8_t cpu)
+inline tl::expected<void, Error> affinize_cpu(const uint8_t cpu)
 {
     cpu_set_t cpu_set;
     CPU_ZERO(&cpu_set);
@@ -44,7 +44,7 @@ inline Result affinize_cpu(const uint8_t cpu)
 
     if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set), &cpu_set) != 0)
     {
-        return unexpected(format("Failed to set cpu affinity: {}", strerror(errno)));
+        return unexpected(Error(CPUAffinityError, format("Failed to set cpu affinity: {}", strerror(errno))));
     }
     return {};
 }
@@ -63,10 +63,10 @@ namespace HyCAN
         {
             throw std::runtime_error(format("Failed to create thread_event_fd file descriptor: {}", strerror(errno)));
         }
-        if (const auto result = epoll_fd_add_sock_fd(thread_event_fd); !result)
+        epoll_fd_add_sock_fd(thread_event_fd).map_error([](const auto& e)
         {
-            throw std::runtime_error(result.error());
-        }
+            throw std::runtime_error(e.message);
+        });
 
         cpu_core = thread_counter.fetch_add(1, std::memory_order_acquire) % get_nprocs();
     }
@@ -84,36 +84,33 @@ namespace HyCAN
         }
     }
 
-    Result Reaper::start() noexcept
+    tl::expected<void, Error> Reaper::start() noexcept
     {
-        if (const auto result = socket.ensure_connected(); !result)
-        {
-            return unexpected(result.error());
-        }
-        if (const auto result = epoll_fd_add_sock_fd(socket.sock_fd); !result)
-        {
-            return unexpected(result.error());
-        }
-
-        if (const auto result = socket.flush(); !result)
-        {
-            return unexpected(result.error());
-        }
-
-        if (!reap_thread.joinable())
-        {
-            reap_thread = jthread(&Reaper::reap_process, this);
-        }
-        return {};
+        return socket.ensure_connected()
+                     .and_then([&] { return epoll_fd_add_sock_fd(socket.sock_fd); })
+                     .and_then([&] { return socket.flush(); })
+                     .and_then([&]
+                     {
+                         if (!reap_thread.joinable())
+                         {
+                             reap_thread = jthread(&Reaper::reap_process, this);
+                         }
+                         return tl::expected<void, Error>{};
+                     });
     }
 
-    Result Reaper::stop() noexcept
+    tl::expected<void, Error> Reaper::stop() noexcept
     {
         if (reap_thread.joinable())
         {
             reap_thread.request_stop();
             constexpr uint64_t one = 1;
-            [[maybe_unused]] const ssize_t _ = write(thread_event_fd, &one, sizeof(one));
+            if (const ssize_t result = write(thread_event_fd, &one, sizeof(one)); result == -1)
+            {
+                return unexpected(Error{
+                    ReaperStopError, format("Failed to write one bytes to the specified socket: {}", strerror(errno))
+                });
+            };
             reap_thread.join();
         }
         return {};
@@ -121,9 +118,9 @@ namespace HyCAN
 
     void Reaper::reap_process(const std::stop_token& stop_token)
     {
-        [[maybe_unused]] auto _ = lock_memory();
-        _ = make_real_time();
-        _ = affinize_cpu(cpu_core);
+        lock_memory();
+        make_real_time();
+        affinize_cpu(cpu_core);
         epoll_event events[MAX_EPOLL_EVENT]{};
         while (true)
         {
@@ -177,7 +174,7 @@ namespace HyCAN
         }
     }
 
-    Result Reaper::epoll_fd_add_sock_fd(const int sock_fd) const noexcept
+    tl::expected<void, Error> Reaper::epoll_fd_add_sock_fd(const int sock_fd) const noexcept
     {
         epoll_event ev{};
         ev = {
@@ -188,7 +185,9 @@ namespace HyCAN
         };
         if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sock_fd, &ev) == -1)
         {
-            return unexpected(format("Failed to EPOLL_CTL_ADD thread_event_fd: {}", strerror(errno)));
+            return unexpected(Error{
+                EpollError, format("Failed to EPOLL_CTL_ADD thread_event_fd: {}", strerror(errno))
+            });
         }
         return {};
     }
