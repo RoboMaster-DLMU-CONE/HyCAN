@@ -81,7 +81,7 @@ int main()
 
     if (const auto result = interface.tryRegisterCallback<can_frame>({TEST_CAN_ID}, test_can_callback); !result)
     {
-        std::cerr << "FAIL: " << result.error();
+        std::cerr << "FAIL: " << result.error().message;
         result_code = EXIT_FAILURE;
     }
 
@@ -89,7 +89,7 @@ int main()
     std::cout << "\nTEST 1: Bringing interface UP and testing send/receive..." << std::endl;
     if (const auto result = interface.up(); !result)
     {
-        std::cerr << "FAIL: " << result.error();
+        std::cerr << "FAIL: " << result.error().message;
         result_code = EXIT_FAILURE;
     }
     std::cout << "Interface UP command issued. Waiting briefly for setup..." << std::endl;
@@ -99,7 +99,7 @@ int main()
 
     if (const auto result = interface.send(frame_to_send); !result)
     {
-        std::cerr << "FAIL: " << result.error();
+        std::cerr << "FAIL: " << result.error().message;
         result_code = EXIT_FAILURE;
     }
 
@@ -149,7 +149,7 @@ int main()
     std::cout << "\nTEST 2: Bringing interface DOWN and verifying no messages are received..." << std::endl;
     if (const auto result = interface.down(); !result)
     {
-        std::cerr << "FAIL: " << result.error();
+        std::cerr << "FAIL: " << result.error().message;
         result_code = EXIT_FAILURE;
     }
     std::cout << "Interface DOWN command issued. Waiting briefly for teardown..." << std::endl;
@@ -163,7 +163,7 @@ int main()
     // The primary check is that the reaper thread (and thus callback) is no longer active.
     if (const auto result = interface.send(frame_to_send); !result)
     {
-        std::cerr << "Detect Error: " << result.error() << std::endl;
+        std::cerr << "Detect Error: " << result.error().message << std::endl;
     }
 
     std::cout << "Waiting to see if callback is (incorrectly) triggered (1 second)..." << std::endl;

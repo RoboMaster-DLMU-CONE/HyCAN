@@ -61,7 +61,7 @@ namespace HyCAN
         {
             throw std::runtime_error(format("Failed to create thread_event_fd file descriptor: {}", strerror(errno)));
         }
-        epoll_fd_add_sock_fd(thread_event_fd).map_error([](const std::string& e)
+        epoll_fd_add_sock_fd(thread_event_fd).map_error([](const auto& e)
         {
             throw std::runtime_error(e);
         });

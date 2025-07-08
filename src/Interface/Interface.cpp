@@ -1,5 +1,6 @@
 #include "HyCAN/Interface/Interface.hpp"
 using std::string, tl::unexpected;
+using enum HyCAN::InterfaceErrorCode;
 
 namespace HyCAN
 {
@@ -10,21 +11,21 @@ namespace HyCAN
     {
     }
 
-    tl::expected<void, std::string> Interface::up()
+    tl::expected<void, InterfaceError> Interface::up()
     {
-        if (const auto result = netlink.up(); !result)
-        {
-            return unexpected(result.error());
-        }
-        return reaper.start();
+        return netlink.up().map_error([](const auto& e) { return InterfaceError{NetlinkError, e}; })
+                      .and_then([&]
+                      {
+                          return reaper.start().map_error([](const auto& e) { return InterfaceError{ReaperError, e}; });
+                      });
     }
 
-    tl::expected<void, std::string> Interface::down()
+    tl::expected<void, InterfaceError> Interface::down()
     {
-        if (const auto result = netlink.down(); !result)
-        {
-            return unexpected(result.error());
-        }
-        return reaper.stop();
+        return netlink.down().map_error([](const auto& e) { return InterfaceError{NetlinkError, e}; })
+                      .and_then([&]
+                      {
+                          return reaper.stop().map_error([](const auto& e) { return InterfaceError{ReaperError, e}; });
+                      });
     }
 }

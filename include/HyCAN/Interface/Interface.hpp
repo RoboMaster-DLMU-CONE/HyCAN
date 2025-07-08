@@ -11,22 +11,49 @@
 
 namespace HyCAN
 {
+    enum class InterfaceErrorCode
+    {
+        NetlinkError,
+        ReaperError,
+        SenderError,
+        RegisterFuncError,
+    };
+
+    struct InterfaceError
+    {
+        InterfaceErrorCode code;
+        std::string message;
+
+        InterfaceError(const InterfaceErrorCode c, const std::string& msg): code(c), message(std::move(msg))
+        {
+        }
+    };
+
     class Interface
     {
     public:
         explicit Interface(const std::string& interface_name);
         Interface() = delete;
-        tl::expected<void, std::string> up();
-        tl::expected<void, std::string> down();
+        tl::expected<void, InterfaceError> up();
+        tl::expected<void, InterfaceError> down();
 
         template <CanFrameConvertible T>
-        tl::expected<void, std::string> send(T frame) { return sender.send(std::move(frame)); };
+        tl::expected<void, InterfaceError> send(T frame)
+        {
+            return sender.send(std::move(frame)).map_error([](const auto& e)
+            {
+                return InterfaceError{InterfaceErrorCode::SenderError, e};
+            });
+        };
 
         template <CanFrameConvertible T = can_frame>
-        tl::expected<void, std::string> tryRegisterCallback(const std::set<size_t>& can_ids,
-                                                            const std::function<void(T&&)>& func)
+        tl::expected<void, InterfaceError> tryRegisterCallback(const std::set<size_t>& can_ids,
+                                                               const std::function<void(T&&)>& func)
         {
-            return reaper.tryRegisterFunc<T>(can_ids, func);
+            return reaper.tryRegisterFunc<T>(can_ids, func).map_error([](const auto& e)
+            {
+                return InterfaceError{InterfaceErrorCode::RegisterFuncError, e};
+            });
         }
 #ifdef HYCAN_LATENCY_TEST
         Reaper::LatencyStats get_reaper_latency_stats() const

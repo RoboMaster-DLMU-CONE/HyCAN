@@ -16,7 +16,7 @@ namespace HyCAN
 {
     Netlink::Netlink(const string_view interface_name): interface_name(interface_name)
     {
-        create_vcan_interface_if_not_exists(interface_name).map_error([](const std::string& e)
+        create_vcan_interface_if_not_exists(interface_name).map_error([](const auto& e)
         {
             throw std::runtime_error(e);
         });

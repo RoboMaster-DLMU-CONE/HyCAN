@@ -155,7 +155,7 @@ int main()
                     {target_can_id}, callback_for_interface);
                 !result)
             {
-                std::cerr << result.error() << std::endl;
+                std::cerr << result.error().message << std::endl;
             }
 
             std::cout << "Callback registered for " << if_name << " on ID 0x" << std::hex << target_can_id << std::dec
@@ -235,7 +235,7 @@ int main()
             {
                 if (const auto result = hycan_interfaces[i]->down(); !result)
                 {
-                    std::cerr << result.error() << std::endl;
+                    std::cerr << result.error().message << std::endl;
                 }
             }
             catch (const std::exception& e)
