@@ -1,13 +1,12 @@
 #include <iostream>
-#include <string_view>
 #include <string>
-#include <cstdlib>
 #include <cstring>
 #include <sys/socket.h>
 #include <net/if.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
 
+#include "HyCAN/Interface/Interface.hpp"
 #include "HyCAN/Interface/Netlink.hpp"
 using HyCAN::Netlink;
 
@@ -48,11 +47,12 @@ int main()
 
     // --- Test 1: Set Virtual Interface UP ---
     std::cout << "\nTEST 1: Bringing UP virtual interface '" << test_interface_name << "'..." << std::endl;
-    if (const auto result = netlink.up(); !result)
+    netlink.up().or_else([&](const auto& e)
     {
-        std::cerr << "FAIL: " << result.error() << std::endl;
+        std::cerr << "FAIL: " << e << std::endl;
         test_result_code = EXIT_FAILURE;
-    }
+    });
+
     std::cout << "PASS: Netlink::up for '" << test_interface_name << "' succeeded." << std::endl;
 
     // existence & state check after up()
@@ -69,11 +69,11 @@ int main()
 
     // --- Test 2: Set Interface DOWN ---
     std::cout << "\nTEST 2: Bringing DOWN interface '" << test_interface_name << "'..." << std::endl;
-    if (const auto result = netlink.down(); !result)
+    netlink.down().or_else([&](const auto& e)
     {
-        std::cerr << "FAIL: " << result.error() << std::endl;
+        std::cerr << "FAIL: " << e << std::endl;
         test_result_code = EXIT_FAILURE;
-    }
+    });
     std::cout << "PASS: Netlink::down for '" << test_interface_name << "' succeeded." << std::endl;
 
     // existence & state check after down()

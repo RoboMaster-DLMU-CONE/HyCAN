@@ -29,17 +29,17 @@ int main()
 
     Interface interface("vcan0");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    auto _ = interface.tryRegisterCallback({0x100}, callback);
-    _ = interface.up();
+    interface.tryRegisterCallback({0x100}, callback);
+    interface.up();
     std::this_thread::sleep_for(std::chrono::seconds(2));
     for (int i = 0; i < 5; ++i)
     {
-        _ = interface.send(test_frame);
+        interface.send(test_frame);
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 
     std::this_thread::sleep_for(std::chrono::seconds(4));
-    _ = interface.down();
+    interface.down();
     std::this_thread::sleep_for(std::chrono::seconds(2));
     return 0;
 }
