@@ -4,6 +4,7 @@
 #include <string>
 
 #include <tl/expected.hpp>
+#include <HyCAN/Util/Error.hpp>
 
 namespace HyCAN
 {
@@ -13,8 +14,8 @@ namespace HyCAN
         explicit Socket(std::string_view interface_name);
         Socket() = delete;
         ~Socket();
-        tl::expected<void, std::string> ensure_connected() noexcept;
-        [[nodiscard]] tl::expected<void, std::string> flush() const noexcept;
+        tl::expected<void, Error> ensure_connected() noexcept;
+        [[nodiscard]] tl::expected<void, Error> flush() const noexcept;
         int sock_fd{};
 
     private:

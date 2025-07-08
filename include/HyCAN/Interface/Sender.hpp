@@ -18,27 +18,29 @@ namespace HyCAN
         Sender() = delete;
 
         template <CanFrameConvertible T>
-        tl::expected<void, std::string> send(T frame) noexcept
+        tl::expected<void, Error> send(T frame) noexcept
         {
-            if (const auto socket_result = socket.ensure_connected(); !socket_result)
+            return socket.ensure_connected().and_then([&]
             {
-                return tl::unexpected(socket_result.error());
-            }
-            ssize_t result;
-            if constexpr (std::is_same<T, can_frame>())
-            {
-                result = write(socket.sock_fd, &frame, sizeof(frame));
-            }
-            else
-            {
-                const auto cf = static_cast<can_frame>(frame);
-                result = write(socket.sock_fd, &cf, sizeof(cf));
-            }
-            if (result == -1)
-            {
-                return tl::unexpected(std::format("Failed to send CAN message: {}", strerror(errno)));
-            }
-            return {};
+                ssize_t result;
+                if constexpr (std::is_same<T, can_frame>())
+                {
+                    result = write(socket.sock_fd, &frame, sizeof(frame));
+                }
+                else
+                {
+                    const auto cf = static_cast<can_frame>(frame);
+                    result = write(socket.sock_fd, &cf, sizeof(cf));
+                }
+                if (result == -1)
+                {
+                    return tl::expected<void, Error>(tl::unexpected(Error(ErrorCode::CANSocketWriteError,
+                                                                          std::format(
+                                                                              "Failed to send CAN message: {}",
+                                                                              strerror(errno)))));
+                }
+                return tl::expected<void, Error>{};
+            });
         };
 
     private:

@@ -88,7 +88,7 @@ void sender_worker_fn(
         {
             senders[interface_rr_index]->send(frame_to_send).or_else([&](const auto& e)
             {
-                std::cerr << e << std::endl;
+                std::cerr << e.message << std::endl;
             });
             messages_sent_by_this_thread++;
         }

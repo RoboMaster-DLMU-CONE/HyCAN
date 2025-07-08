@@ -30,15 +30,15 @@ namespace HyCAN
         Reaper& operator=(const Reaper& other) = delete;
         Reaper& operator=(Reaper&& other) noexcept = delete;
 
-        tl::expected<void, std::string> start() noexcept;
-        tl::expected<void, std::string> stop() noexcept;
+        tl::expected<void, Error> start() noexcept;
+        tl::expected<void, Error> stop() noexcept;
 
         template <CanFrameConvertible T = can_frame>
-        tl::expected<void, std::string> tryRegisterFunc(const std::set<size_t>& can_ids, std::function<void(T&&)> func)
+        tl::expected<void, Error> tryRegisterFunc(const std::set<size_t>& can_ids, std::function<void(T&&)> func)
         {
             if (!func)
             {
-                return tl::unexpected("Provided callback function is empty");
+                return tl::unexpected(Error{ErrorCode::EmptyFuncError, "Provided callback function is empty"});
             }
             std::function<void(can_frame&&)> register_func;
             if constexpr (std::is_same<T, can_frame>())
@@ -57,7 +57,10 @@ namespace HyCAN
             {
                 if (id >= 2048)
                 {
-                    return tl::unexpected(std::format("CAN ID {} exceeds maximum limit of 2047", id));
+                    return tl::unexpected(Error{
+                        ErrorCode::FuncCANIdSetError,
+                        std::format("CAN ID {} exceeds maximum limit of 2047", id)
+                    });
                 }
                 funcs[id] = register_func;
             }
@@ -78,7 +81,7 @@ namespace HyCAN
 
     private:
         void reap_process(const std::stop_token& stop_token);
-        tl::expected<void, std::string> epoll_fd_add_sock_fd(int sock_fd) const noexcept;
+        tl::expected<void, Error> epoll_fd_add_sock_fd(int sock_fd) const noexcept;
 
         Socket socket;
         int thread_event_fd{-1};

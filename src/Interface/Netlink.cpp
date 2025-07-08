@@ -18,32 +18,37 @@ namespace HyCAN
     {
         create_vcan_interface_if_not_exists(interface_name).map_error([](const auto& e)
         {
-            throw std::runtime_error(e);
+            throw std::runtime_error(e.message);
         });
     }
 
-    tl::expected<void, std::string> Netlink::up() noexcept
+    tl::expected<void, Error> Netlink::up() noexcept
     {
         return set_sock<true>();
     }
 
-    tl::expected<void, std::string> Netlink::down() noexcept
+    tl::expected<void, Error> Netlink::down() noexcept
     {
         return set_sock<false>();
     }
 
     template <bool state>
-    tl::expected<void, std::string> Netlink::set_sock() noexcept
+    tl::expected<void, Error> Netlink::set_sock() noexcept
     {
         nl_sock* sock = nl_socket_alloc();
         if (!sock)
         {
-            return unexpected(format("Netlink socket not initialized for {}", interface_name));
+            return unexpected(Error{
+                ErrorCode::NetlinkSocketNotInitialized, format("Netlink socket not initialized for {}", interface_name)
+            });
         }
+
         if (nl_connect(sock, NETLINK_ROUTE) < 0)
         {
             nl_socket_free(sock);
-            return unexpected(format("Failed to connect to netlink socket for {}", interface_name));
+            return unexpected(Error{
+                ErrorCode::NetlinkConnectError, format("Failed to connect to netlink socket for {}", interface_name)
+            });
         }
         // Setting up / down Netlink
 
@@ -52,7 +57,9 @@ namespace HyCAN
         {
             nl_close(sock);
             nl_socket_free(sock);
-            return unexpected(format("Interface {} not found", interface_name));
+            return unexpected(Error{
+                ErrorCode::NetlinkInterfaceNotFound, format("Interface {} not found", interface_name)
+            });
         }
         rtnl_link* link = rtnl_link_alloc();
         rtnl_link* change = rtnl_link_alloc();
@@ -62,7 +69,9 @@ namespace HyCAN
             if (change) rtnl_link_put(change);
             nl_close(sock);
             nl_socket_free(sock);
-            return unexpected(format("Failed to allocate rtnl_link for {}", interface_name));
+            return unexpected(Error{
+                ErrorCode::RtnlLinkAllocError, format("Failed to allocate rtnl_link for {}", interface_name)
+            });
         }
 
         rtnl_link_set_ifindex(link, ifindex);
@@ -84,11 +93,17 @@ namespace HyCAN
             nl_socket_free(sock);
             if constexpr (state == 0)
             {
-                return unexpected(format("Failed to bring down interface {}: {}", interface_name, nl_geterror(err)));
+                return unexpected(Error{
+                    ErrorCode::NetlinkBringDownError,
+                    format("Failed to bring down interface {}: {}", interface_name, nl_geterror(err))
+                });
             }
             else
             {
-                return unexpected(format("Failed to bring up interface {}: {}", interface_name, nl_geterror(err)));
+                return unexpected(Error{
+                    ErrorCode::NetlinkBringUpError,
+                    format("Failed to bring up interface {}: {}", interface_name, nl_geterror(err))
+                });
             }
         }
         rtnl_link_put(link);
@@ -98,6 +113,6 @@ namespace HyCAN
         return {};
     }
 
-    template tl::expected<void, std::string> Netlink::set_sock<true>() noexcept;
-    template tl::expected<void, std::string> Netlink::set_sock<false>() noexcept;
+    template tl::expected<void, Error> Netlink::set_sock<true>() noexcept;
+    template tl::expected<void, Error> Netlink::set_sock<false>() noexcept;
 }
