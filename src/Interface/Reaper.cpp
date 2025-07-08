@@ -89,13 +89,13 @@ namespace HyCAN
         return socket.ensure_connected()
                      .and_then([&] { return epoll_fd_add_sock_fd(socket.sock_fd); })
                      .and_then([&] { return socket.flush(); })
-                     .and_then([&] -> tl::expected<void, Error>
+                     .and_then([&]
                      {
                          if (!reap_thread.joinable())
                          {
                              reap_thread = jthread(&Reaper::reap_process, this);
                          }
-                         return {};
+                         return tl::expected<void, Error>{};
                      });
     }
 
