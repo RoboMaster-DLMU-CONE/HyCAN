@@ -1,22 +1,25 @@
 #include "HyCAN/Interface/Netlink.hpp"
 #include "HyCAN/Interface/VCAN.hpp"
 
+#include <stdexcept>
+#include <format>
+
 #include <net/if.h>
 
 #include <netlink/netlink.h>
 #include <netlink/route/link.h>
 
 
-using std::unexpected, std::string_view;
+using tl::unexpected, std::string_view;
 
 namespace HyCAN
 {
     Netlink::Netlink(const string_view interface_name): interface_name(interface_name)
     {
-        if (const auto result = create_vcan_interface_if_not_exists(interface_name); !result)
+        create_vcan_interface_if_not_exists(interface_name).map_error([](const std::string& e)
         {
-            throw std::runtime_error(result.error());
-        }
+            throw std::runtime_error(e);
+        });
     }
 
     Result Netlink::up() noexcept

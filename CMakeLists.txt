@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(HyCAN VERSION 0.6.2)
+project(HyCAN VERSION 0.7.0)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(CMAKE_CXX_STANDARD 23)
@@ -10,7 +10,8 @@ option(BUILD_HYCAN_EXAMPLE "Build HyCAN Examples" OFF)
 option(BUILD_HYCAN_TEST "Build HyCAN Tests" OFF)
 option(TEST_HYCAN_LATENCY "Adding Latency statistics for testing" OFF)
 
-include(HyCANFindlibnl3)
+include(HyCANFindLibnl3)
+include(HyCANFindTlExpected)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
@@ -29,7 +30,7 @@ target_include_directories(HyCAN
         PRIVATE
         ${LIBNL3_INCLUDE_DIR}
 )
-target_link_libraries(HyCAN PUBLIC ${LIBNL3_LIBRARIES})
+target_link_libraries(HyCAN PUBLIC ${LIBNL3_LIBRARIES} tl::expected)
 
 if (BUILD_HYCAN_EXAMPLE)
     include(HyCANExamples)
