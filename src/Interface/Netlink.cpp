@@ -22,18 +22,18 @@ namespace HyCAN
         });
     }
 
-    Result Netlink::up() noexcept
+    tl::expected<void, std::string> Netlink::up() noexcept
     {
         return set_sock<true>();
     }
 
-    Result Netlink::down() noexcept
+    tl::expected<void, std::string> Netlink::down() noexcept
     {
         return set_sock<false>();
     }
 
     template <bool state>
-    Result Netlink::set_sock() noexcept
+    tl::expected<void, std::string> Netlink::set_sock() noexcept
     {
         nl_sock* sock = nl_socket_alloc();
         if (!sock)
@@ -98,6 +98,6 @@ namespace HyCAN
         return {};
     }
 
-    template Result Netlink::set_sock<true>() noexcept;
-    template Result Netlink::set_sock<false>() noexcept;
+    template tl::expected<void, std::string> Netlink::set_sock<true>() noexcept;
+    template tl::expected<void, std::string> Netlink::set_sock<false>() noexcept;
 }

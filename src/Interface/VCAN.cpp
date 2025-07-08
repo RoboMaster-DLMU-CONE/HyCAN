@@ -10,7 +10,7 @@ using tl::unexpected, std::format;
 
 namespace HyCAN
 {
-    Result create_vcan_interface_if_not_exists(const std::string_view interface_name) noexcept
+    tl::expected<void, std::string> create_vcan_interface_if_not_exists(const std::string_view interface_name) noexcept
     {
         if (if_nametoindex(interface_name.data()) != 0)
         {
