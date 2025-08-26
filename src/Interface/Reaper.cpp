@@ -51,7 +51,7 @@ inline tl::expected<void, Error> affinize_cpu(const uint8_t cpu)
 
 namespace HyCAN
 {
-    Reaper::Reaper(const std::string_view interface_name): socket(interface_name), interface_name(interface_name)
+    Reaper::Reaper(const std::string_view interface_name) : socket(interface_name), interface_name(interface_name)
     {
         epoll_fd = epoll_create(256);
         if (epoll_fd == -1)
@@ -63,7 +63,7 @@ namespace HyCAN
         {
             throw std::runtime_error(format("Failed to create thread_event_fd file descriptor: {}", strerror(errno)));
         }
-        epoll_fd_add_sock_fd(thread_event_fd).map_error([](const auto& e)
+        (void)epoll_fd_add_sock_fd(thread_event_fd).map_error([](const auto& e)
         {
             throw std::runtime_error(e.message);
         });
@@ -90,13 +90,13 @@ namespace HyCAN
                      .and_then([&] { return epoll_fd_add_sock_fd(socket.sock_fd); })
                      .and_then([&] { return socket.flush(); })
                      .and_then([&]
-                     {
-                         if (!reap_thread.joinable())
-                         {
-                             reap_thread = jthread(&Reaper::reap_process, this);
-                         }
-                         return tl::expected<void, Error>{};
-                     });
+                      {
+                          if (!reap_thread.joinable())
+                          {
+                              reap_thread = jthread(&Reaper::reap_process, this);
+                          }
+                          return tl::expected<void, Error>{};
+                      });
     }
 
     tl::expected<void, Error> Reaper::stop() noexcept
@@ -118,9 +118,9 @@ namespace HyCAN
 
     void Reaper::reap_process(const std::stop_token& stop_token)
     {
-        lock_memory();
-        make_real_time();
-        affinize_cpu(cpu_core);
+        (void)lock_memory();
+        (void)make_real_time();
+        (void)affinize_cpu(cpu_core);
         epoll_event events[MAX_EPOLL_EVENT]{};
         while (true)
         {

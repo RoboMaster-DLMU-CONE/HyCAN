@@ -47,7 +47,7 @@ int main()
 
     // --- Test 1: Set Virtual Interface UP ---
     std::cout << "\nTEST 1: Bringing UP virtual interface '" << test_interface_name << "'..." << std::endl;
-    netlink.up().or_else([&](const auto& e)
+    (void)netlink.up().or_else([&](const auto& e)
     {
         std::cerr << "FAIL: " << e.message << std::endl;
         test_result_code = EXIT_FAILURE;
@@ -69,7 +69,7 @@ int main()
 
     // --- Test 2: Set Interface DOWN ---
     std::cout << "\nTEST 2: Bringing DOWN interface '" << test_interface_name << "'..." << std::endl;
-    netlink.down().or_else([&](const auto& e)
+    (void)netlink.down().or_else([&](const auto& e)
     {
         std::cerr << "FAIL: " << e.message << std::endl;
         test_result_code = EXIT_FAILURE;

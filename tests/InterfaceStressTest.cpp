@@ -86,7 +86,7 @@ void sender_worker_fn(
 
         if (senders[interface_rr_index])
         {
-            senders[interface_rr_index]->send(frame_to_send).or_else([&](const auto& e)
+            (void)senders[interface_rr_index]->send(frame_to_send).or_else([&](const auto& e)
             {
                 std::cerr << e.message << std::endl;
             });
@@ -151,7 +151,7 @@ int main()
                 stress_test_callback(std::move(frame), i, target_can_id);
             };
 
-            interface_ptr->tryRegisterCallback<can_frame>(
+            (void)interface_ptr->tryRegisterCallback<can_frame>(
                 {target_can_id}, callback_for_interface).or_else([&](const auto& e)
             {
                 std::cerr << e.message << std::endl;
@@ -232,7 +232,7 @@ int main()
             std::cout << "Bringing DOWN " << if_name << "..." << std::endl;
             try
             {
-                hycan_interfaces[i]->down().or_else([&](const auto& e)
+                (void)hycan_interfaces[i]->down().or_else([&](const auto& e)
                 {
                     std::cerr << e.message << std::endl;
                 });

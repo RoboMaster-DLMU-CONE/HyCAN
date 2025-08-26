@@ -79,7 +79,7 @@ int main()
     g_callback_triggered.store(false, std::memory_order_relaxed);
     g_received_frame.reset();
 
-    interface.tryRegisterCallback<can_frame>({TEST_CAN_ID}, test_can_callback).or_else([&](const auto& e)
+    (void)interface.tryRegisterCallback<can_frame>({TEST_CAN_ID}, test_can_callback).or_else([&](const auto& e)
     {
         std::cerr << "FAIL: " << e.message;
         result_code = EXIT_FAILURE;
@@ -87,7 +87,7 @@ int main()
 
     // --- Test 1: Interface UP and Send/Receive ---
     std::cout << "\nTEST 1: Bringing interface UP and testing send/receive..." << std::endl;
-    interface.up().or_else([&](const auto& e)
+    (void)interface.up().or_else([&](const auto& e)
     {
         std::cerr << "FAIL: " << e.message;
         result_code = EXIT_FAILURE;
@@ -97,7 +97,7 @@ int main()
 
     std::cout << "Sending CAN frame with ID 0x" << std::hex << TEST_CAN_ID << std::dec << "..." << std::endl;
 
-    interface.send(frame_to_send).or_else([&](const auto& e)
+    (void)interface.send(frame_to_send).or_else([&](const auto& e)
     {
         std::cerr << "FAIL: " << e.message;
         result_code = EXIT_FAILURE;
@@ -147,7 +147,7 @@ int main()
 
     // --- Test 2: Interface DOWN and Verify No More Callbacks ---
     std::cout << "\nTEST 2: Bringing interface DOWN and verifying no messages are received..." << std::endl;
-    interface.down().or_else([&](const auto& e)
+    (void)interface.down().or_else([&](const auto& e)
     {
         std::cerr << "FAIL: " << e.message;
         result_code = EXIT_FAILURE;
@@ -161,7 +161,7 @@ int main()
     std::cout << "Sending CAN frame again (interface should be down)..." << std::endl;
     // The send operation might log an error if the underlying socket is closed or interface is down.
     // The primary check is that the reaper thread (and thus callback) is no longer active.
-    interface.send(frame_to_send).or_else([&](const auto& e)
+    (void)interface.send(frame_to_send).or_else([&](const auto& e)
     {
         std::cerr << "Sending CAN Message failed." << e.message << std::endl;
     });
