@@ -15,6 +15,7 @@ namespace HyCAN
         Socket() = delete;
         ~Socket();
         tl::expected<void, Error> ensure_connected() noexcept;
+        tl::expected<void, Error> validate_connection() noexcept;
         [[nodiscard]] tl::expected<void, Error> flush() const noexcept;
         int sock_fd{};
 

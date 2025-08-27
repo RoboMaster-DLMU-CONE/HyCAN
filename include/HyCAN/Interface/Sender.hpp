@@ -20,7 +20,7 @@ namespace HyCAN
         template <CanFrameConvertible T>
         tl::expected<void, Error> send(T frame) noexcept
         {
-            return socket.ensure_connected().and_then([&]
+            return socket.validate_connection().and_then([&]
             {
                 ssize_t result;
                 if constexpr (std::is_same<T, can_frame>())
@@ -34,10 +34,12 @@ namespace HyCAN
                 }
                 if (result == -1)
                 {
-                    return tl::expected<void, Error>(tl::unexpected(Error(ErrorCode::CANSocketWriteError,
-                                                                          std::format(
-                                                                              "Failed to send CAN message: {}",
-                                                                              strerror(errno)))));
+                    return tl::expected<void, Error>(tl::make_unexpected(Error{
+                        ErrorCode::CANSocketWriteError,
+                        std::format(
+                            "Failed to send CAN message: {}",
+                            strerror(errno))
+                    }));
                 }
                 return tl::expected<void, Error>{};
             });

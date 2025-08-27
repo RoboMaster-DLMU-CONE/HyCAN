@@ -3,9 +3,9 @@
 ## 亮点
 
 - 基于`epoll`的高并发支持。每秒处理**100k消息**的场景下：
-    - **低CPU占用**：平均 `25%` CPU占用率（基于 AMD Ryzen 7 7840HS CPU
+    - **低CPU占用**：平均 `20%` CPU占用率（基于 AMD Ryzen 7 7840HS CPU
       ），**无丢帧**
-    - **低延迟**：每条消息平均延迟低至**15us**
+    - **低延迟**：每条消息平均延迟低至**10us**
     - [详见InterfaceStressTest](tests/InterfaceStressTest.cpp)
 - 用户友好的API
 - 无需外置脚本，库内直接开关`Netlink`上的`CAN/VCAN`接口。

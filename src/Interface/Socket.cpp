@@ -13,7 +13,7 @@ using tl::unexpected, std::format, std::string_view;
 
 namespace HyCAN
 {
-    Socket::Socket(const string_view interface_name): interface_name(interface_name)
+    Socket::Socket(const string_view interface_name) : interface_name(interface_name)
     {
     };
 
@@ -66,6 +66,21 @@ namespace HyCAN
 
         const int flags = fcntl(sock_fd, F_GETFL, 0);
         fcntl(sock_fd, F_SETFL, flags | O_NONBLOCK);
+        return {};
+    }
+
+    tl::expected<void, Error> Socket::validate_connection() noexcept
+    {
+        if (sock_fd <= 0)
+        {
+            return ensure_connected();
+        }
+        int error = 0;
+        socklen_t len = sizeof(error);
+        if (getsockopt(sock_fd, SOL_SOCKET, SO_ERROR, &error, &len) == -1 || error != 0)
+        {
+            return ensure_connected();
+        }
         return {};
     }
 
