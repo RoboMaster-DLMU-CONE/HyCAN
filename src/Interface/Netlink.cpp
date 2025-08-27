@@ -16,6 +16,7 @@ namespace HyCAN
 {
     Netlink::Netlink(const string_view interface_name) : interface_name(interface_name)
     {
+        // TODO: only create vcan if user want it. at runtime.
         (void)create_vcan_interface_if_not_exists(interface_name).map_error([](const auto& e)
         {
             throw std::runtime_error(e.message);
@@ -32,6 +33,7 @@ namespace HyCAN
         return set_sock<false>();
     }
 
+    //TODO: remove useless template
     template <bool state>
     tl::expected<void, Error> Netlink::set_sock() noexcept
     {
