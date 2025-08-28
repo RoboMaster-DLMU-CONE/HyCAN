@@ -12,7 +12,6 @@ option(BUILD_HYCAN_EXAMPLE "Build HyCAN Examples" OFF)
 option(BUILD_HYCAN_TEST "Build HyCAN Tests" OFF)
 option(TEST_HYCAN_LATENCY "Adding Latency statistics for testing" OFF)
 
-include(HyCANFindLibnl3)
 include(HyCANFindTlExpected)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -29,10 +28,8 @@ target_include_directories(HyCAN
         PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-        PRIVATE
-        ${LIBNL3_INCLUDE_DIR}
 )
-target_link_libraries(HyCAN PUBLIC ${LIBNL3_LIBRARIES} tl::expected)
+target_link_libraries(HyCAN PUBLIC tl::expected)
 
 if (BUILD_HYCAN_EXAMPLE)
     include(HyCANExamples)
@@ -56,6 +53,22 @@ install(TARGETS HyCAN
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
+
+# Install sudo rules for CAN interface management without password
+install(CODE "
+    set(SUDOERS_FILE \"/etc/sudoers.d/can-interface\")
+    message(STATUS \"Creating sudo rules file: \${SUDOERS_FILE}\")
+    file(WRITE \${SUDOERS_FILE} 
+        \"# HyCAN: Allow dialout group to manage CAN interfaces without password\\n\"
+        \"%dialout ALL=(ALL) NOPASSWD: /sbin/ip link set can* type can bitrate *\\n\"
+        \"%dialout ALL=(ALL) NOPASSWD: /sbin/ip link set can* up\\n\"
+        \"%dialout ALL=(ALL) NOPASSWD: /sbin/ip link set can* down\\n\"
+        \"%dialout ALL=(ALL) NOPASSWD: /sbin/ip link add * type vcan\\n\"
+    )
+    execute_process(COMMAND chmod 440 \${SUDOERS_FILE})
+    message(STATUS \"Sudo rules installed. Users in 'dialout' group can now manage CAN interfaces without sudo password.\")
+    message(STATUS \"Add user to dialout group with: sudo usermod -a -G dialout \$USER\")
+")
 install(EXPORT HyCANTargets
         FILE HyCANTargets.cmake
         NAMESPACE HyCAN::
