@@ -8,7 +8,7 @@
     - **低延迟**：每条消息平均延迟低至**10us**
     - [详见InterfaceStressTest](tests/InterfaceStressTest.cpp)
 - 用户友好的API
-- 无需外置脚本，库内直接开关`Netlink`上的`CAN/VCAN`接口。
+- 无需外置脚本，库内直接开关`CAN/VCAN`接口。
 
 ## 使用场景
 
@@ -40,7 +40,7 @@
 
 ```shell
 # Debian系
-sudo apt install pkg-config cmake libnl-3-dev libnl-nf-3-dev
+sudo apt install cmake iproute2
 ```
 
 #### CMake构建
@@ -48,8 +48,17 @@ sudo apt install pkg-config cmake libnl-3-dev libnl-nf-3-dev
 ```shell
 cmake -S . -B build
 cmake --build build
-#可选：安装到系统
+#可选：安装到系统（会创建sudo规则以支持无密码CAN接口管理）
 sudo cmake --install build
+```
+
+#### 配置用户权限
+
+安装后，为了让用户无需sudo密码即可管理CAN接口，请将用户添加到`dialout`组：
+
+```shell
+sudo usermod -a -G dialout $USER
+# 重新登录使组权限生效
 ```
 
 ### 使用HyCAN
@@ -90,4 +99,4 @@ target_link_libraries(MyConsumerApp PRIVATE HyCAN::HyCAN)
 
 ## Credit
 
-- [libnl](https://github.com/thom311/libnl)
+- [iproute2](https://github.com/iproute2/iproute2) - Linux 网络配置工具

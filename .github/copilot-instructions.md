@@ -16,7 +16,7 @@ HyCAN 是一个现代高性能 Linux C++ CAN 通信协议库，专为高实时�
 - **Interface**: 主要 API 类，提供 CAN 通信的统一接口
 - **Reaper**: 消息接收器，使用实时线程和延迟测试功能
 - **Sender**: 消息发送器
-- **Netlink**: 底层网络通信
+- **Netlink**: CAN接口管理（使用iproute2工具）
 - **Socket/VCAN**: CAN 接口管理
 - **Util**: 工具类（如 SpinLock 自旋锁）
 
@@ -27,7 +27,7 @@ HyCAN 是一个现代高性能 Linux C++ CAN 通信协议库，专为高实时�
 1. **系统包依赖安装**：
 ```bash
 sudo apt update
-sudo apt install -y pkg-config libnl-3-dev libnl-nf-3-dev linux-modules-extra-$(uname -r)
+sudo apt install -y cmake iproute2 linux-modules-extra-$(uname -r)
 ```
 
 2. **加载内核模块**（构建前始终必须执行）：
@@ -73,7 +73,6 @@ cd build && sudo ctest --output-on-failure
 ├── LICENSE                     # BSD 3-Clause 许可证
 ├── .github/workflows/test.yml  # GitHub Actions CI/CD 配置
 ├── cmake/                      # CMake 模块和配置
-│   ├── HyCANFindLibnl3.cmake  # libnl3 依赖查找
 │   ├── HyCANFindTlExpected.cmake # tl::expected 依赖管理
 │   ├── HyCANTests.cmake       # 测试配置
 │   ├── HyCANExamples.cmake    # 示例程序配置
@@ -95,7 +94,7 @@ cd build && sudo ctest --output-on-failure
 - `include/HyCAN/Interface/Reaper.hpp`: 消息接收器（支持实时调度）
 - `include/HyCAN/Interface/Sender.hpp`: 消息发送器
 - `include/HyCAN/Interface/Socket.hpp`: CAN 套接字封装
-- `include/HyCAN/Interface/Netlink.hpp`: Netlink 通信接口
+- `include/HyCAN/Interface/Netlink.hpp`: CAN接口管理接口
 
 ### 关键设计模式
 - **函数式错误处理**: 使用 `tl::expected<T, Error>` 替代异常
@@ -109,20 +108,21 @@ cd build && sudo ctest --output-on-failure
 - **依赖管理**: 自动获取 tl::expected，镜像仓库故障转移
 
 ### 外部依赖说明
-- **libnl-3**: Linux Netlink 库用于底层网络通信
+- **iproute2**: Linux 网络配置工具用于CAN接口管理
 - **tl::expected**: 现代 C++ 错误处理库（自动从 GitHub 获取）
 - **Linux CAN 内核模块**: 必须在运行时加载
 
 ### 常见问题和解决方案
 
-1. **构建失败 - 缺少 libnl3**:
-   - 确保已安装：`sudo apt install libnl-3-dev libnl-nf-3-dev`
+1. **构建失败 - 缺少 iproute2**:
+   - 确保已安装：`sudo apt install iproute2`
 
 2. **测试失败 - CAN 模块未加载**:
    - 执行：`sudo modprobe vcan && sudo modprobe can`
 
 3. **权限错误**:
-   - 测试需要 sudo 权限：`sudo ctest --output-on-failure`
+   - 安装时创建sudo规则：`sudo cmake --install build`
+   - 将用户添加到dialout组：`sudo usermod -a -G dialout $USER`
 
 4. **网络获取失败**:
    - tl::expected 库会自动回退到 Gitee 镜像
