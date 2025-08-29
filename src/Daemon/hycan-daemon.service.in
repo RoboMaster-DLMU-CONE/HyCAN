@@ -1,0 +1,23 @@
+[Unit]
+Description=HyCAN Network Interface Daemon
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=@CMAKE_INSTALL_PREFIX@/bin/HyCAN_Daemon
+Restart=always
+RestartSec=5
+User=root
+Group=root
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=false
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

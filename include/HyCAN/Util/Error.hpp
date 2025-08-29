@@ -1,12 +1,15 @@
 #ifndef HYCAN_ERROR_HPP
 #define HYCAN_ERROR_HPP
 
+#include <string>
+
 namespace HyCAN
 {
     enum class ErrorCode
     {
         // VCAN
         VCANCheckingError,
+        VCANCreationError,
 
         // Netlink
         NlSocketAllocError,
@@ -39,7 +42,7 @@ namespace HyCAN
 
     struct Error
     {
-        Error(const ErrorCode c, const std::string& msg): code(c), message(std::move(msg))
+        Error(const ErrorCode c, const std::string& msg) : code(c), message(std::move(msg))
         {
         }
 
