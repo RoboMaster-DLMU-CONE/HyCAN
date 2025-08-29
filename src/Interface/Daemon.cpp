@@ -20,6 +20,69 @@ namespace HyCAN
     static constexpr size_t MAX_INTERFACE_NAME_LEN = 256;
     static constexpr size_t MAX_ERROR_MESSAGE_LEN = 1024;
 
+    // RAII wrapper for netlink socket management
+    class NetlinkSocketRAII
+    {
+    public:
+        NetlinkSocketRAII()
+        {
+            sock_ = nl_socket_alloc();
+            if (sock_ && nl_connect(sock_, NETLINK_ROUTE) < 0)
+            {
+                nl_socket_free(sock_);
+                sock_ = nullptr;
+            }
+        }
+
+        ~NetlinkSocketRAII()
+        {
+            if (sock_)
+            {
+                nl_close(sock_);
+                nl_socket_free(sock_);
+            }
+        }
+
+        // Non-copyable, non-movable for simplicity
+        NetlinkSocketRAII(const NetlinkSocketRAII&) = delete;
+        NetlinkSocketRAII& operator=(const NetlinkSocketRAII&) = delete;
+
+        nl_sock* get() const { return sock_; }
+        bool is_valid() const { return sock_ != nullptr; }
+
+    private:
+        nl_sock* sock_{nullptr};
+    };
+
+    // Helper to safely setup socket address with validation
+    tl::expected<sockaddr_un, Error> setup_socket_address(const std::string& socket_path)
+    {
+        if (socket_path.empty())
+        {
+            return unexpected(Error{
+                ErrorCode::NetlinkConnectError, "Socket path cannot be empty"
+            });
+        }
+
+        // Check if path would be truncated
+        if (socket_path.length() >= sizeof(sockaddr_un::sun_path))
+        {
+            return unexpected(Error{
+                ErrorCode::NetlinkConnectError, 
+                format("Socket path too long (max {}, got {})", 
+                       sizeof(sockaddr_un::sun_path) - 1, socket_path.length())
+            });
+        }
+
+        sockaddr_un addr{};
+        addr.sun_family = AF_UNIX;
+        
+        // Safe copy - we already validated the length
+        std::strcpy(addr.sun_path, socket_path.c_str());
+        
+        return addr;
+    }
+
     Daemon::Daemon() = default;
 
     Daemon::~Daemon()
@@ -44,12 +107,17 @@ namespace HyCAN
         // Remove existing socket file if it exists
         unlink(socket_path_.c_str());
 
-        // Bind socket
-        struct sockaddr_un addr{};
-        addr.sun_family = AF_UNIX;
-        strncpy(addr.sun_path, socket_path_.c_str(), sizeof(addr.sun_path) - 1);
+        // Bind socket with safe address setup
+        auto addr_result = setup_socket_address(socket_path_);
+        if (!addr_result)
+        {
+            close(server_fd_);
+            server_fd_ = -1;
+            return unexpected(addr_result.error());
+        }
         
-        if (bind(server_fd_, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == -1)
+        const auto& addr = addr_result.value();
+        if (bind(server_fd_, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)) == -1)
         {
             close(server_fd_);
             server_fd_ = -1;
@@ -201,134 +269,62 @@ namespace HyCAN
             });
         }
 
-        // Creating VCAN for Interface.
-        nl_sock* sock;
-        rtnl_link* link;
-        if (sock = nl_socket_alloc(); !sock)
+        // Creating VCAN for Interface using RAII wrapper
+        NetlinkSocketRAII nl_socket;
+        if (!nl_socket.is_valid())
         {
-            return unexpected(Error{ErrorCode::NlSocketAllocError, "Error: Cannot alloc nl_socket."});
+            return unexpected(Error{ErrorCode::NlSocketAllocError, "Error: Cannot alloc or connect nl_socket."});
         }
 
-        if (nl_connect(sock, NETLINK_ROUTE) < 0)
+        rtnl_link* link = rtnl_link_alloc();
+        if (!link)
         {
-            nl_socket_free(sock);
-            return unexpected(Error{ErrorCode::NlConnectError, "Error: Cannot connected to nl_socket."});
-        }
-
-        if (link = rtnl_link_alloc(); !link)
-        {
-            nl_close(sock);
-            nl_socket_free(sock);
             return unexpected(Error{ErrorCode::RtnlLinkAllocError, "Error: Cannot alloc rtnl_link."});
         }
 
         rtnl_link_set_name(link, interface_name.data());
         rtnl_link_set_type(link, "vcan");
 
-        if (const int err = rtnl_link_add(sock, link, NLM_F_CREATE); err < 0)
+        const int err = rtnl_link_add(nl_socket.get(), link, NLM_F_CREATE);
+        rtnl_link_put(link);
+        
+        if (err < 0)
         {
-            rtnl_link_put(link);
-            nl_close(sock);
-            nl_socket_free(sock);
             return unexpected(Error{
                 ErrorCode::RtnlLinkAddError, format("Error: Cannot create interface: {}.", nl_geterror(err))
             });
         }
-        rtnl_link_put(link);
-        nl_close(sock);
-        nl_socket_free(sock);
+        
         return {};
     }
 
     tl::expected<void, Error> Daemon::set_interface_up(string_view interface_name) noexcept
     {
-        // This is moved from Netlink.cpp set_sock<true>()
-        nl_sock* sock = nl_socket_alloc();
-        if (!sock)
-        {
-            return unexpected(Error{
-                ErrorCode::NetlinkSocketNotInitialized, format("Netlink socket not initialized for {}", interface_name)
-            });
-        }
-
-        if (nl_connect(sock, NETLINK_ROUTE) < 0)
-        {
-            nl_socket_free(sock);
-            return unexpected(Error{
-                ErrorCode::NetlinkConnectError, format("Failed to connect to netlink socket for {}", interface_name)
-            });
-        }
-
-        const int ifindex = static_cast<int>(if_nametoindex(interface_name.data()));
-        if (ifindex == 0)
-        {
-            nl_close(sock);
-            nl_socket_free(sock);
-            return unexpected(Error{
-                ErrorCode::NetlinkInterfaceNotFound, format("Interface {} not found", interface_name)
-            });
-        }
-        
-        rtnl_link* link = rtnl_link_alloc();
-        rtnl_link* change = rtnl_link_alloc();
-        if (!link || !change)
-        {
-            if (link) rtnl_link_put(link);
-            if (change) rtnl_link_put(change);
-            nl_close(sock);
-            nl_socket_free(sock);
-            return unexpected(Error{
-                ErrorCode::RtnlLinkAllocError, format("Failed to allocate rtnl_link for {}", interface_name)
-            });
-        }
-
-        rtnl_link_set_ifindex(link, ifindex);
-        rtnl_link_set_flags(change, IFF_UP);
-
-        if (const int err = rtnl_link_change(sock, link, change, 0); err < 0)
-        {
-            rtnl_link_put(link);
-            rtnl_link_put(change);
-            nl_close(sock);
-            nl_socket_free(sock);
-            return unexpected(Error{
-                ErrorCode::NetlinkBringUpError,
-                format("Failed to bring up interface {}: {}", interface_name, nl_geterror(err))
-            });
-        }
-        rtnl_link_put(link);
-        rtnl_link_put(change);
-        nl_close(sock);
-        nl_socket_free(sock);
-        return {};
+        return set_interface_state(interface_name, true);
     }
 
     tl::expected<void, Error> Daemon::set_interface_down(string_view interface_name) noexcept
     {
-        // This is moved from Netlink.cpp set_sock<false>()
-        nl_sock* sock = nl_socket_alloc();
-        if (!sock)
-        {
-            return unexpected(Error{
-                ErrorCode::NetlinkSocketNotInitialized, format("Netlink socket not initialized for {}", interface_name)
-            });
-        }
+        return set_interface_state(interface_name, false);
+    }
 
-        if (nl_connect(sock, NETLINK_ROUTE) < 0)
+    tl::expected<void, Error> Daemon::set_interface_state(string_view interface_name, bool up) noexcept
+    {
+        NetlinkSocketRAII nl_socket;
+        if (!nl_socket.is_valid())
         {
-            nl_socket_free(sock);
             return unexpected(Error{
-                ErrorCode::NetlinkConnectError, format("Failed to connect to netlink socket for {}", interface_name)
+                ErrorCode::NetlinkSocketNotInitialized, 
+                format("Netlink socket not initialized for {}", interface_name)
             });
         }
 
         const int ifindex = static_cast<int>(if_nametoindex(interface_name.data()));
         if (ifindex == 0)
         {
-            nl_close(sock);
-            nl_socket_free(sock);
             return unexpected(Error{
-                ErrorCode::NetlinkInterfaceNotFound, format("Interface {} not found", interface_name)
+                ErrorCode::NetlinkInterfaceNotFound, 
+                format("Interface {} not found", interface_name)
             });
         }
         
@@ -338,31 +334,38 @@ namespace HyCAN
         {
             if (link) rtnl_link_put(link);
             if (change) rtnl_link_put(change);
-            nl_close(sock);
-            nl_socket_free(sock);
             return unexpected(Error{
-                ErrorCode::RtnlLinkAllocError, format("Failed to allocate rtnl_link for {}", interface_name)
+                ErrorCode::RtnlLinkAllocError, 
+                format("Failed to allocate rtnl_link for {}", interface_name)
             });
         }
 
         rtnl_link_set_ifindex(link, ifindex);
-        rtnl_link_unset_flags(change, IFF_UP);
-
-        if (const int err = rtnl_link_change(sock, link, change, 0); err < 0)
+        
+        // Set or unset the IFF_UP flag based on 'up' parameter
+        if (up)
         {
-            rtnl_link_put(link);
-            rtnl_link_put(change);
-            nl_close(sock);
-            nl_socket_free(sock);
-            return unexpected(Error{
-                ErrorCode::NetlinkBringDownError,
-                format("Failed to bring down interface {}: {}", interface_name, nl_geterror(err))
-            });
+            rtnl_link_set_flags(change, IFF_UP);
         }
+        else
+        {
+            rtnl_link_unset_flags(change, IFF_UP);
+        }
+
+        const int err = rtnl_link_change(nl_socket.get(), link, change, 0);
+        
         rtnl_link_put(link);
         rtnl_link_put(change);
-        nl_close(sock);
-        nl_socket_free(sock);
+        
+        if (err < 0)
+        {
+            return unexpected(Error{
+                up ? ErrorCode::NetlinkBringUpError : ErrorCode::NetlinkBringDownError,
+                format("Failed to bring {} interface {}: {}", 
+                       up ? "up" : "down", interface_name, nl_geterror(err))
+            });
+        }
+        
         return {};
     }
 
@@ -482,12 +485,16 @@ namespace HyCAN
             });
         }
 
-        // Connect to daemon
-        struct sockaddr_un addr{};
-        addr.sun_family = AF_UNIX;
-        strncpy(addr.sun_path, socket_path_.c_str(), sizeof(addr.sun_path) - 1);
+        // Connect to daemon with safe address setup
+        auto addr_result = setup_socket_address(socket_path_);
+        if (!addr_result)
+        {
+            close(client_fd);
+            return unexpected(addr_result.error());
+        }
         
-        if (connect(client_fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == -1)
+        const auto& addr = addr_result.value();
+        if (connect(client_fd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)) == -1)
         {
             close(client_fd);
             return unexpected(Error{

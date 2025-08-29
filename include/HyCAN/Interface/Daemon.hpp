@@ -40,6 +40,9 @@ namespace HyCAN
         tl::expected<void, Error> create_vcan_interface_if_not_exists(std::string_view interface_name) noexcept;
         tl::expected<void, Error> set_interface_up(std::string_view interface_name) noexcept;
         tl::expected<void, Error> set_interface_down(std::string_view interface_name) noexcept;
+        
+        // Common implementation for interface up/down operations
+        tl::expected<void, Error> set_interface_state(std::string_view interface_name, bool up) noexcept;
 
         // Helper methods
         tl::expected<void, Error> send_response(int client_fd, bool success) noexcept;
