@@ -16,6 +16,7 @@ namespace HyCAN
         Netlink() = delete;
         tl::expected<void, Error> up() noexcept;
         tl::expected<void, Error> down() noexcept;
+        tl::expected<bool, Error> is_up() noexcept;
 
     private:
         template <bool state>

@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
 #include <cstring>
+#include <thread>
+#include <chrono>
 #include <sys/socket.h>
 #include <net/if.h>
 #include <unistd.h>
@@ -87,6 +89,64 @@ int main()
         std::cerr << "FAIL: Interface '" << test_interface_name << "' is still UP after down()" << std::endl;
         test_result_code = EXIT_FAILURE;
     }
+
+    // --- Test 3: is_up() method functionality ---
+    std::cout << "\nTEST 3: Testing is_up() method..." << std::endl;
+    
+    // Test when interface is down
+    (void)netlink.is_up().and_then([&](bool is_up) -> tl::expected<void, HyCAN::Error>
+    {
+        if (is_up)
+        {
+            std::cerr << "FAIL: is_up() returned true when interface should be down" << std::endl;
+            test_result_code = EXIT_FAILURE;
+        }
+        else
+        {
+            std::cout << "PASS: is_up() correctly returned false when interface is down" << std::endl;
+        }
+        return {};
+    }).or_else([&](const auto& e)
+    {
+        std::cerr << "FAIL: is_up() call failed: " << e.message << std::endl;
+        test_result_code = EXIT_FAILURE;
+    });
+
+    // Bring interface up again and test is_up()
+    std::cout << "Bringing interface UP again to test is_up()..." << std::endl;
+    (void)netlink.up().or_else([&](const auto& e)
+    {
+        std::cerr << "FAIL: " << e.message << std::endl;
+        test_result_code = EXIT_FAILURE;
+    });
+    
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Brief wait for state change
+    
+    // Test when interface is up
+    (void)netlink.is_up().and_then([&](bool is_up) -> tl::expected<void, HyCAN::Error>
+    {
+        if (!is_up)
+        {
+            std::cerr << "FAIL: is_up() returned false when interface should be up" << std::endl;
+            test_result_code = EXIT_FAILURE;
+        }
+        else
+        {
+            std::cout << "PASS: is_up() correctly returned true when interface is up" << std::endl;
+        }
+        return {};
+    }).or_else([&](const auto& e)
+    {
+        std::cerr << "FAIL: is_up() call failed: " << e.message << std::endl;
+        test_result_code = EXIT_FAILURE;
+    });
+
+    // Clean up - bring interface down again
+    (void)netlink.down().or_else([&](const auto& e)
+    {
+        std::cerr << "FAIL: " << e.message << std::endl;
+        test_result_code = EXIT_FAILURE;
+    });
 
     std::cout << "\n--- HyCAN Netlink Management Test Finished ---" << std::endl;
     return test_result_code;

@@ -236,31 +236,101 @@ namespace HyCAN
         }
     }
 
+    NetlinkResponse Daemon::check_interface_state_libnl(std::string_view interface_name) const
+    {
+        // 刷新缓存以获取最新状态
+        if (nl_cache_refill(nl_socket_, link_cache_) < 0)
+        {
+            return NetlinkResponse(-1, false, "Failed to refresh link cache");
+        }
+
+        rtnl_link* link = rtnl_link_get_by_name(link_cache_, std::string(interface_name).c_str());
+        if (!link)
+        {
+            return NetlinkResponse(-1, false, std::format("Interface {} not found", interface_name));
+        }
+
+        const unsigned int flags = rtnl_link_get_flags(link);
+        const bool is_up = (flags & IFF_UP) != 0;
+
+        rtnl_link_put(link);
+
+        return NetlinkResponse(0, is_up, "Success");
+    }
+
+    NetlinkResponse Daemon::validate_can_hardware_libnl(std::string_view interface_name) const
+    {
+        // 刷新缓存以获取最新状态
+        if (nl_cache_refill(nl_socket_, link_cache_) < 0)
+        {
+            return NetlinkResponse(-1, false, true, "Failed to refresh link cache");
+        }
+
+        rtnl_link* link = rtnl_link_get_by_name(link_cache_, std::string(interface_name).c_str());
+        if (!link)
+        {
+            return NetlinkResponse(-1, false, true, std::format("CAN interface {} not found", interface_name));
+        }
+
+        const bool is_can = rtnl_link_is_can(link);
+
+        rtnl_link_put(link);
+
+        if (!is_can)
+        {
+            return NetlinkResponse(-1, false, true, std::format("Interface {} is not a CAN interface", interface_name));
+        }
+
+        return NetlinkResponse(0, true, true, "CAN hardware interface found");
+    }
+
     NetlinkResponse Daemon::process_request(const NetlinkRequest& request) const
     {
-        // Create VCAN interface if needed
-        if (request.create_vcan_if_needed)
+        switch (request.operation)
         {
-            auto vcan_result = create_vcan_interface_if_not_exists(request.interface_name);
-            if (!vcan_result)
+            case RequestType::SET_INTERFACE_STATE:
             {
-                return NetlinkResponse(-1, std::format("Failed to create VCAN interface {}: {}",
-                                                       request.interface_name, vcan_result.error().message));
-            }
-        }
+                // Create VCAN interface if needed
+                if (request.create_vcan_if_needed)
+                {
+                    auto vcan_result = create_vcan_interface_if_not_exists(request.interface_name);
+                    if (!vcan_result)
+                    {
+                        return NetlinkResponse(-1, std::format("Failed to create VCAN interface {}: {}",
+                                                               request.interface_name, vcan_result.error().message));
+                    }
+                }
 
-        // 如果需要设置比特率（仅对 CAN 接口）
-        if (request.up && request.set_bitrate)
-        {
-            const auto bitrate_result = set_can_bitrate_libnl(request.interface_name, request.bitrate);
-            if (bitrate_result.result != 0)
+                // 如果需要设置比特率（仅对 CAN 接口）
+                if (request.up && request.set_bitrate)
+                {
+                    const auto bitrate_result = set_can_bitrate_libnl(request.interface_name, request.bitrate);
+                    if (bitrate_result.result != 0)
+                    {
+                        return bitrate_result;
+                    }
+                }
+
+                // 设置接口状态
+                return set_interface_state_libnl(request.interface_name, request.up);
+            }
+            case RequestType::CHECK_INTERFACE_STATE:
+                return check_interface_state_libnl(request.interface_name);
+            case RequestType::VALIDATE_CAN_HARDWARE:
+                return validate_can_hardware_libnl(request.interface_name);
+            case RequestType::CREATE_VCAN_INTERFACE:
             {
-                return bitrate_result;
+                auto vcan_result = create_vcan_interface_if_not_exists(request.interface_name);
+                if (!vcan_result)
+                {
+                    return NetlinkResponse(-1, std::format("Failed to create VCAN interface {}: {}",
+                                                           request.interface_name, vcan_result.error().message));
+                }
+                return NetlinkResponse(0, "VCAN interface created successfully");
             }
+            default:
+                return NetlinkResponse(-1, "Unknown request operation");
         }
-
-        // 设置接口状态
-        return set_interface_state_libnl(request.interface_name, request.up);
     }
 
     // 静态实例用于信号处理

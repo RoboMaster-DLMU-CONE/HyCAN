@@ -24,4 +24,9 @@ namespace HyCAN
                           return reaper.stop();
                       });
     }
+
+    tl::expected<bool, Error> Interface::is_up()
+    {
+        return netlink.is_up();
+    }
 }
