@@ -42,6 +42,13 @@ echo "Running tests..."
 TEST_EXIT_CODE=0
 
 echo ""
+echo "=== Running Daemon Test ==="
+./HyCAN_DaemonTest
+if [ $? -ne 0 ]; then
+    TEST_EXIT_CODE=1
+fi
+
+echo ""
 echo "=== Running Netlink Test ==="
 ./HyCAN_NetlinkTest
 if [ $? -ne 0 ]; then

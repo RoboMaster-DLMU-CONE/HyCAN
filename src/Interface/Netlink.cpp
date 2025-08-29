@@ -1,5 +1,6 @@
 #include "HyCAN/Interface/Netlink.hpp"
 #include "HyCAN/Interface/Daemon.hpp"
+#include "HyCAN/Config.hpp"
 
 #include <stdexcept>
 
@@ -9,7 +10,7 @@ namespace HyCAN
 {
     Netlink::Netlink(const string_view interface_name) : interface_name(interface_name)
     {
-        daemon_client_ = std::make_unique<DaemonClient>();
+        daemon_client_ = std::make_unique<DaemonClient>(Config::get_daemon_socket_path());
         
         // Create VCAN interface if it doesn't exist
         (void)daemon_client_->create_vcan_interface(interface_name).map_error([](const auto& e)

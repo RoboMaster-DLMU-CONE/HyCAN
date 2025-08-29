@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/select.h>
 #include <errno.h>
 
 #include <net/if.h>
@@ -74,6 +75,29 @@ namespace HyCAN
         // Main server loop
         while (running_)
         {
+            fd_set read_fds;
+            FD_ZERO(&read_fds);
+            FD_SET(server_fd_, &read_fds);
+            
+            struct timeval timeout;
+            timeout.tv_sec = 1;  // 1 second timeout
+            timeout.tv_usec = 0;
+            
+            int select_result = select(server_fd_ + 1, &read_fds, nullptr, nullptr, &timeout);
+            
+            if (select_result < 0)
+            {
+                if (errno == EINTR) continue; // Interrupted by signal, continue
+                return unexpected(Error{
+                    ErrorCode::NetlinkConnectError,
+                    format("Select failed: {}", strerror(errno))
+                });
+            }
+            
+            if (select_result == 0) continue; // Timeout, check running_ again
+            
+            if (!FD_ISSET(server_fd_, &read_fds)) continue;
+
             int client_fd = accept(server_fd_, nullptr, nullptr);
             if (client_fd == -1)
             {
