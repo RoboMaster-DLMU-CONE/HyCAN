@@ -10,11 +10,12 @@ endif ()
 
 target_include_directories(HyCAN
         PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
         PRIVATE
         ${LIBNL3_INCLUDE_DIR}
 )
-target_link_libraries(HyCAN PUBLIC ${LIBNL3_LIBRARIES} tl::expected)
-
-target_link_libraries(HyCAN PRIVATE ipc)
+target_link_libraries(HyCAN
+        PUBLIC ${LIBNL3_LIBRARIES} tl::expected
+        PRIVATE ipc
+)

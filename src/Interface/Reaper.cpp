@@ -49,6 +49,12 @@ inline tl::expected<void, Error> affinize_cpu(const uint8_t cpu)
     return {};
 }
 
+inline bool has_root_privileges() noexcept
+{
+    return geteuid() == 0;
+}
+
+
 namespace HyCAN
 {
     Reaper::Reaper(const std::string_view interface_name) : socket(interface_name), interface_name(interface_name)
@@ -118,21 +124,32 @@ namespace HyCAN
 
     void Reaper::reap_process(const std::stop_token& stop_token)
     {
-        (void)lock_memory();
         (void)make_real_time();
         (void)affinize_cpu(cpu_core);
+        if (has_root_privileges())
+        {
+            (void)lock_memory();
+        }
         epoll_event events[MAX_EPOLL_EVENT]{};
         while (true)
         {
             const int nfds = epoll_wait(epoll_fd, events, MAX_EPOLL_EVENT, -1);
             if (nfds == -1)
             {
-                if (stop_token.stop_requested())
+                if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
                 {
-                    return;
+                    if (stop_token.stop_requested()) return;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    continue;
                 }
-                throw std::runtime_error(format("Failed to epoll_wait: {}", strerror(errno)));
+                if (!stop_token.stop_requested())
+                {
+                    throw std::runtime_error(format("Failed to epoll_wait: {}", strerror(errno)));
+                }
+                return;
             }
+
+            if (nfds == 0) continue;
 
             for (int i = 0; i < nfds; ++i)
             {
