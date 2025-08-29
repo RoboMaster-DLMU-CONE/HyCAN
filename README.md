@@ -57,6 +57,64 @@ sudo cmake --install build
 
 ### 使用HyCAN
 
+#### API使用示例
+
+HyCAN提供了两种接口类型：
+
+- **VCANInterface**: 用于虚拟CAN接口，自动创建和管理VCAN接口
+- **CANInterface**: 用于真实CAN硬件接口，验证硬件存在
+
+```cpp
+#include <HyCAN/Interface/VCANInterface.hpp>
+#include <linux/can.h>
+#include <iostream>
+#include <thread>
+#include <chrono>
+
+int main() {
+    // 创建虚拟CAN接口（推荐用于测试和仿真）
+    HyCAN::VCANInterface interface("vcan0");
+    
+    // 设置消息回调
+    auto callback = [](can_frame&& frame) {
+        std::cout << "收到CAN消息 ID: 0x" << std::hex << frame.can_id 
+                  << " 数据长度: " << std::dec << (int)frame.len << std::endl;
+    };
+    
+    // 注册回调并启动接口
+    interface.tryRegisterCallback({0x123}, callback)
+             .and_then([&] { return interface.up(); })
+             .or_else([](const auto& error) {
+                 std::cerr << "错误: " << error.message << std::endl;
+             });
+    
+    // 发送CAN消息
+    can_frame frame = {
+        .can_id = 0x123,
+        .len = 8,
+        .data = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
+    };
+    
+    interface.send(frame);
+    
+    // 等待消息处理
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    
+    // 检查接口状态
+    interface.is_up().and_then([](bool up) {
+        std::cout << "接口状态: " << (up ? "UP" : "DOWN") << std::endl;
+        return tl::expected<void, HyCAN::Error>{};
+    });
+    
+    // 关闭接口
+    interface.down();
+    
+    return 0;
+}
+```
+
+#### 在CMake工程中使用
+
 HyCAN支持接入CMake工程。请参考下面的`CMakeLists.txt`示例代码：
 
 ```cmake
@@ -103,11 +161,40 @@ sudo systemctl start hycan-daemon
 
 ## 架构说明
 
+### 守护进程架构
+
 HyCAN采用守护进程架构：
 
 - **HyCAN Daemon**: 作为systemd服务运行，以root权限管理CAN/VCAN接口
 - **用户应用**: 通过IPC与守护进程通信，无需root权限即可操作CAN接口
 - **安全隔离**: 只有守护进程需要特权，用户代码运行在受限环境中
+
+### 接口类型层次结构
+
+HyCAN提供了清晰的接口类型层次：
+
+- **Interface (基类)**: 提供通用的CAN通信功能
+  - `up()` / `down()`: 启动/关闭接口
+  - `is_up()`: 检查接口状态（新增功能）
+  - `send()`: 发送CAN消息
+  - `tryRegisterCallback()`: 注册消息回调
+  
+- **VCANInterface (派生类)**: 虚拟CAN接口
+  - 自动创建和管理VCAN接口
+  - 适用于测试、仿真和开发环境
+  
+- **CANInterface (派生类)**: 真实CAN硬件接口  
+  - 验证CAN硬件存在性
+  - 适用于生产环境和实际硬件
+
+### 模块化守护进程
+
+守护进程采用模块化设计，提高代码可维护性：
+
+- **InterfaceManager**: 处理接口状态操作
+- **CANManager**: 处理CAN特定操作（比特率设置、硬件验证）
+- **RequestProcessor**: 处理不同类型的请求分发
+- **Daemon**: 主协调器，处理IPC通信
 
 ## 故障排除
 

@@ -16,12 +16,24 @@ systemd 守护进程架构来避免每次运行程序前手动启动 CAN/VCAN �
 
 ### 核心功能模块
 
-- **Interface**: 主要 API 类，提供 CAN 通信的统一接口
+#### 接口层次结构
+- **Interface (基类)**: 提供 CAN 通信的统一接口，包含 is_up() 状态检查功能
+- **VCANInterface**: 虚拟 CAN 接口派生类，自动创建和管理 VCAN 接口
+- **CANInterface**: 真实 CAN 硬件接口派生类，验证硬件存在性
+- **Netlink**: 底层网络通信，提供 is_up() 状态检查方法
+
+#### 通信组件
 - **Reaper**: 消息接收器，使用实时线程和延迟测试功能
 - **Sender**: 消息发送器
-- **Daemon**: systemd 守护进程，以 root 权限管理 CAN/VCAN 接口
-- **Netlink**: 底层网络通信（现在主要由 Daemon 使用）
 - **Socket/VCAN**: CAN 接口管理
+
+#### 守护进程模块化架构
+- **Daemon**: 主协调器，处理 IPC 通信和请求分发
+- **InterfaceManager**: 专门处理接口状态操作（up/down/is_up）
+- **CANManager**: 专门处理 CAN 特定操作（比特率设置、硬件验证）
+- **RequestProcessor**: 统一处理不同类型的守护进程请求
+
+#### 工具类
 - **Util**: 工具类（如 SpinLock 自旋锁）
 
 ### 新架构优势
@@ -131,12 +143,23 @@ cd build && ctest --output-on-failure
 
 ### 核心头文件说明
 
-- `include/HyCAN/Interface/Interface.hpp`: 主要 API 接口
+#### 接口层次
+- `include/HyCAN/Interface/Interface.hpp`: 基类 API 接口（包含 is_up() 功能）
+- `include/HyCAN/Interface/VCANInterface.hpp`: 虚拟 CAN 接口实现
+- `include/HyCAN/Interface/CANInterface.hpp`: 真实 CAN 硬件接口实现
+- `include/HyCAN/Interface/Netlink.hpp`: 底层 Netlink 通信（包含 is_up() 功能）
+
+#### 通信组件
 - `include/HyCAN/Interface/Reaper.hpp`: 消息接收器（支持实时调度）
 - `include/HyCAN/Interface/Sender.hpp`: 消息发送器
 - `include/HyCAN/Interface/Socket.hpp`: CAN 套接字封装
+
+#### 守护进程模块
 - `include/HyCAN/Daemon/Daemon.hpp`: 守护进程通信接口
 - `include/HyCAN/Daemon/DaemonClass.hpp`: 守护进程核心类
+- `include/HyCAN/Daemon/InterfaceManager.hpp`: 接口状态管理模块
+- `include/HyCAN/Daemon/CANManager.hpp`: CAN 特定操作模块
+- `include/HyCAN/Daemon/RequestProcessor.hpp`: 请求处理模块
 - `include/HyCAN/Daemon/VCAN.hpp`: VCAN 管理接口
 
 ### 关键设计模式
@@ -188,8 +211,10 @@ cd build && ctest --output-on-failure
 2. **代码修改前**: 始终先运行完整构建和测试验证当前状态
 3. **增量开发**: 使用 `cmake --build build` 进行增量编译
 4. **测试驱动**: 修改代码后立即运行相关测试（无需 sudo）
-5. **守护进程开发**: 修改守护进程代码后需重新安装和重启服务
-6. **实时功能**: 修改涉及 Reaper 的代码时，确保测试延迟统计功能
+5. **接口选择**: 开发和测试建议使用 `VCANInterface`，生产环境使用 `CANInterface`
+6. **守护进程开发**: 修改守护进程代码后需重新安装和重启服务
+7. **实时功能**: 修改涉及 Reaper 的代码时，确保测试延迟统计功能
+8. **状态检查**: 使用新的 `is_up()` 方法检查接口状态
 7. **内存安全**: 注意 CAN 帧数据的生命周期管理
 
 ### 性能敏感区域
