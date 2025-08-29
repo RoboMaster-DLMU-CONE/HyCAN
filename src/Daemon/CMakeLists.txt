@@ -5,7 +5,7 @@ add_executable(HyCAN_Daemon
 
 target_include_directories(HyCAN_Daemon PRIVATE ${PROJECT_SOURCE_DIR}/include ${LIBNL3_INCLUDE_DIR})
 
-target_link_libraries(HyCAN_Daemon PRIVATE ipc ${LIBNL3_LIBRARIES})
+target_link_libraries(HyCAN_Daemon PRIVATE cpp-ipc::ipc ${LIBNL3_LIBRARIES})
 
 install(TARGETS HyCAN_Daemon
         RUNTIME DESTINATION bin

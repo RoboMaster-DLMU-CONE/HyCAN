@@ -17,3 +17,8 @@ FetchContent_Declare(cpp_ipc
         GIT_TAG master
 )
 FetchContent_MakeAvailable(cpp_ipc)
+
+# Create alias with namespace for proper export
+if (TARGET ipc AND NOT TARGET cpp-ipc::ipc)
+    add_library(cpp-ipc::ipc ALIAS ipc)
+endif ()

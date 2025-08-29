@@ -17,5 +17,5 @@ target_include_directories(HyCAN
 )
 target_link_libraries(HyCAN
         PUBLIC ${LIBNL3_LIBRARIES} tl::expected
-        PRIVATE ipc
+        PRIVATE cpp-ipc::ipc
 )
