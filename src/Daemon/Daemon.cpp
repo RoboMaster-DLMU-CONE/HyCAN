@@ -3,19 +3,20 @@
 #include <csignal>
 #include <unistd.h>
 #include <format>
-#include <net/if.h>
+#include <memory>
 
 #include <netlink/cache.h>
 #include <netlink/errno.h>
 #include <netlink/netlink.h>
 #include <netlink/socket.h>
 #include <netlink/route/link.h>
-#include <netlink/route/link/can.h>
 
 #include "libipc/ipc.h"
 #include "HyCAN/Daemon/Daemon.hpp"
 #include "HyCAN/Daemon/DaemonClass.hpp"
-#include "HyCAN/Daemon/VCAN.hpp"
+#include "HyCAN/Daemon/InterfaceManager.hpp"
+#include "HyCAN/Daemon/CANManager.hpp"
+#include "HyCAN/Daemon/RequestProcessor.hpp"
 
 namespace HyCAN
 {
@@ -25,6 +26,11 @@ namespace HyCAN
         {
             throw std::runtime_error("Failed to initialize netlink in daemon");
         }
+
+        // Initialize modular components
+        interface_manager_ = std::make_unique<InterfaceManager>(nl_socket_, link_cache_);
+        can_manager_ = std::make_unique<CANManager>(nl_socket_, link_cache_);
+        request_processor_ = std::make_unique<RequestProcessor>(*interface_manager_, *can_manager_);
     }
 
     Daemon::~Daemon()
@@ -85,7 +91,7 @@ namespace HyCAN
                     << ", operation: " << operation_name << std::endl;
 
                 // 处理请求
-                auto response = process_request(*request);
+                auto response = request_processor_->process_request(*request);
 
                 // 发送响应
                 auto response_data = ipc::buff_t{reinterpret_cast<ipc::byte_t*>(&response), sizeof(response)};
@@ -140,6 +146,7 @@ namespace HyCAN
         if (rtnl_link_alloc_cache(nl_socket_, AF_UNSPEC, &link_cache_) < 0)
         {
             std::cerr << "Failed to allocate link cache" << std::endl;
+            nl_close(nl_socket_);
             nl_socket_free(nl_socket_);
             nl_socket_ = nullptr;
             return -1;
@@ -155,201 +162,12 @@ namespace HyCAN
             nl_cache_free(link_cache_);
             link_cache_ = nullptr;
         }
+
         if (nl_socket_)
         {
+            nl_close(nl_socket_);
             nl_socket_free(nl_socket_);
             nl_socket_ = nullptr;
-        }
-    }
-
-    NetlinkResponse Daemon::set_interface_state_libnl(std::string_view interface_name, const bool up) const
-    {
-        // 刷新缓存以获取最新状态
-        if (nl_cache_refill(nl_socket_, link_cache_) < 0)
-        {
-            return NetlinkResponse(-1, "Failed to refresh link cache");
-        }
-
-        rtnl_link* link = rtnl_link_get_by_name(link_cache_, std::string(interface_name).c_str());
-        if (!link)
-        {
-            return NetlinkResponse(-1, std::format("Interface {} not found", interface_name));
-        }
-
-        rtnl_link* change = rtnl_link_alloc();
-        if (!change)
-        {
-            rtnl_link_put(link);
-            return NetlinkResponse(-1, "Failed to allocate change link object");
-        }
-
-        // 设置接口状态
-        if (up)
-        {
-            rtnl_link_set_flags(change, IFF_UP);
-        }
-        else
-        {
-            rtnl_link_unset_flags(change, IFF_UP);
-        }
-
-        const int result = rtnl_link_change(nl_socket_, link, change, 0);
-
-        rtnl_link_put(change);
-        rtnl_link_put(link);
-
-        if (result < 0)
-        {
-            return NetlinkResponse(result, std::format("rtnl_link_change failed: {}", nl_geterror(result)));
-        }
-
-        // 再次刷新缓存以反映更改
-        nl_cache_refill(nl_socket_, link_cache_);
-
-        return NetlinkResponse(0, "Success");
-    }
-
-    NetlinkResponse Daemon::set_can_bitrate_libnl(std::string_view interface_name, const uint32_t bitrate) const
-    {
-        if (!interface_name.starts_with("can"))
-        {
-            return NetlinkResponse(0, "Not a CAN interface, skipping bitrate setting");
-        }
-
-        rtnl_link* link = rtnl_link_get_by_name(link_cache_, std::string(interface_name).c_str());
-        if (!link)
-        {
-            return NetlinkResponse(-1, std::format("CAN Interface {} not found", interface_name));
-        }
-
-        rtnl_link* change = rtnl_link_alloc();
-        if (!change)
-        {
-            rtnl_link_put(link);
-            return NetlinkResponse(-1, "Failed to allocate change link object for CAN");
-        }
-
-        // 设置 CAN 比特率
-        if (rtnl_link_is_can(link))
-        {
-            rtnl_link_can_set_bitrate(change, bitrate);
-            const int result = rtnl_link_change(nl_socket_, link, change, 0);
-
-            rtnl_link_put(change);
-            rtnl_link_put(link);
-
-            if (result < 0)
-            {
-                return NetlinkResponse(result, std::format("Failed to set CAN bitrate: {}", nl_geterror(result)));
-            }
-
-            return NetlinkResponse(0, "CAN bitrate set successfully");
-        }
-        else
-        {
-            rtnl_link_put(change);
-            rtnl_link_put(link);
-            return NetlinkResponse(-1, "Interface is not a CAN interface");
-        }
-    }
-
-    NetlinkResponse Daemon::check_interface_state_libnl(std::string_view interface_name) const
-    {
-        // 刷新缓存以获取最新状态
-        if (nl_cache_refill(nl_socket_, link_cache_) < 0)
-        {
-            return NetlinkResponse(-1, false, "Failed to refresh link cache");
-        }
-
-        rtnl_link* link = rtnl_link_get_by_name(link_cache_, std::string(interface_name).c_str());
-        if (!link)
-        {
-            return NetlinkResponse(-1, false, std::format("Interface {} not found", interface_name));
-        }
-
-        const unsigned int flags = rtnl_link_get_flags(link);
-        const bool is_up = (flags & IFF_UP) != 0;
-
-        rtnl_link_put(link);
-
-        return NetlinkResponse(0, is_up, "Success");
-    }
-
-    NetlinkResponse Daemon::validate_can_hardware_libnl(std::string_view interface_name) const
-    {
-        // 刷新缓存以获取最新状态
-        if (nl_cache_refill(nl_socket_, link_cache_) < 0)
-        {
-            return NetlinkResponse(-1, false, true, "Failed to refresh link cache");
-        }
-
-        rtnl_link* link = rtnl_link_get_by_name(link_cache_, std::string(interface_name).c_str());
-        if (!link)
-        {
-            return NetlinkResponse(-1, false, true, std::format("CAN interface {} not found", interface_name));
-        }
-
-        const bool is_can = rtnl_link_is_can(link);
-
-        rtnl_link_put(link);
-
-        if (!is_can)
-        {
-            return NetlinkResponse(-1, false, true, std::format("Interface {} is not a CAN interface", interface_name));
-        }
-
-        return NetlinkResponse(0, true, true, "CAN hardware interface found");
-    }
-
-    NetlinkResponse Daemon::process_request(const NetlinkRequest& request) const
-    {
-        switch (request.operation)
-        {
-            case RequestType::SET_INTERFACE_STATE:
-            {
-                // Create VCAN interface if needed
-                if (request.create_vcan_if_needed)
-                {
-                    auto vcan_result = create_vcan_interface_if_not_exists(request.interface_name);
-                    if (!vcan_result)
-                    {
-                        return NetlinkResponse(-1, std::format("Failed to create VCAN interface {}: {}",
-                                                               request.interface_name, vcan_result.error().message));
-                    }
-                }
-
-                // 如果需要设置比特率（仅对 CAN 接口）
-                if (request.up && request.set_bitrate)
-                {
-                    const auto bitrate_result = set_can_bitrate_libnl(request.interface_name, request.bitrate);
-                    if (bitrate_result.result != 0)
-                    {
-                        return bitrate_result;
-                    }
-                }
-
-                // 设置接口状态
-                return set_interface_state_libnl(request.interface_name, request.up);
-            }
-            case RequestType::CHECK_INTERFACE_STATE:
-                return check_interface_state_libnl(request.interface_name);
-            case RequestType::VALIDATE_CAN_HARDWARE:
-                return validate_can_hardware_libnl(request.interface_name);
-            case RequestType::CREATE_VCAN_INTERFACE:
-            {
-                std::cout << "Processing CREATE_VCAN_INTERFACE for " << request.interface_name << std::endl;
-                auto vcan_result = create_vcan_interface_if_not_exists(request.interface_name);
-                if (!vcan_result)
-                {
-                    std::cout << "VCAN creation failed: " << vcan_result.error().message << std::endl;
-                    return NetlinkResponse(-1, std::format("Failed to create VCAN interface {}: {}",
-                                                           request.interface_name, vcan_result.error().message));
-                }
-                std::cout << "VCAN creation successful for " << request.interface_name << std::endl;
-                return NetlinkResponse(0, "VCAN interface created successfully");
-            }
-            default:
-                return NetlinkResponse(-1, "Unknown request operation");
         }
     }
 
@@ -374,15 +192,15 @@ int main()
         HyCAN::Daemon daemon;
         HyCAN::g_daemon_instance = &daemon;
 
-        // 设置信号处理
-        signal(SIGTERM, HyCAN::signal_handler);
-        signal(SIGINT, HyCAN::signal_handler);
+        // 注册信号处理器
+        std::signal(SIGTERM, HyCAN::signal_handler);
+        std::signal(SIGINT, HyCAN::signal_handler);
 
         return daemon.run();
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Fatal error: " << e.what() << std::endl;
+        std::cerr << "Daemon initialization failed: " << e.what() << std::endl;
         return 1;
     }
 }

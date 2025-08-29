@@ -1,5 +1,8 @@
 add_executable(HyCAN_Daemon
         Daemon.cpp
+        InterfaceManager.cpp
+        CANManager.cpp
+        RequestProcessor.cpp
         VCAN.cpp
 )
 

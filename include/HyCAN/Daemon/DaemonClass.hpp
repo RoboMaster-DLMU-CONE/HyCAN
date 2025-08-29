@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <string_view>
+#include <memory>
 
 #include "libipc/ipc.h"
 
@@ -13,6 +14,9 @@ namespace HyCAN
 {
     struct NetlinkRequest;
     struct NetlinkResponse;
+    class InterfaceManager;
+    class CANManager;
+    class RequestProcessor;
 
     /**
      * @brief HyCAN Daemon class for handling network interface management
@@ -25,15 +29,13 @@ namespace HyCAN
         nl_sock* nl_socket_{nullptr};
         nl_cache* link_cache_{nullptr};
 
+        // Modular components for different responsibilities
+        std::unique_ptr<InterfaceManager> interface_manager_;
+        std::unique_ptr<CANManager> can_manager_;
+        std::unique_ptr<RequestProcessor> request_processor_;
 
         int init_netlink();
         void cleanup_netlink();
-
-        NetlinkResponse set_interface_state_libnl(std::string_view interface_name, bool up) const;
-        NetlinkResponse set_can_bitrate_libnl(std::string_view interface_name, uint32_t bitrate) const;
-        NetlinkResponse check_interface_state_libnl(std::string_view interface_name) const;
-        NetlinkResponse validate_can_hardware_libnl(std::string_view interface_name) const;
-        NetlinkResponse process_request(const NetlinkRequest& request) const;
 
     public:
         Daemon();
