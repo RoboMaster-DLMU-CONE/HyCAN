@@ -16,9 +16,11 @@ namespace HyCAN
     public:
         explicit Interface(const std::string& interface_name);
         Interface() = delete;
-        tl::expected<void, Error> up();
-        tl::expected<void, Error> down();
-        tl::expected<bool, Error> is_up();
+        virtual ~Interface() = default;
+        
+        virtual tl::expected<void, Error> up();
+        virtual tl::expected<void, Error> down();
+        virtual tl::expected<bool, Error> is_up();
 
         template <CanFrameConvertible T>
         tl::expected<void, Error> send(T frame)
@@ -39,7 +41,7 @@ namespace HyCAN
         }
 #endif
 
-    private:
+    protected:
         std::string interface_name;
         Netlink netlink;
         Reaper reaper;

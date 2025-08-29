@@ -9,7 +9,7 @@
 #include <cstring> // For std::memcpy in frame construction if needed
 
 #include <linux/can.h>
-#include "HyCAN/Interface/Interface.hpp" // Adjust path if necessary
+#include "HyCAN/Interface/VCANInterface.hpp" // Use VCANInterface instead of generic Interface
 
 // Test constants
 const std::string TEST_INTERFACE_NAME = "vcan_hytest"; // Unique vcan interface name for this test
@@ -69,7 +69,7 @@ int main()
     std::cout << "INFO: Ensure 'vcan' module is loaded (sudo modprobe vcan)." << std::endl;
     std::cout << "INFO: This test may require CAP_NET_ADMIN or root privileges to manage the interface." << std::endl;
 
-    HyCAN::Interface interface(TEST_INTERFACE_NAME);
+    HyCAN::VCANInterface interface(TEST_INTERFACE_NAME);
 
     // Prepare the frame to be sent
     can_frame frame_to_send{};

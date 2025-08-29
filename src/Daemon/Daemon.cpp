@@ -64,8 +64,25 @@ namespace HyCAN
 
                 const auto* request = static_cast<const NetlinkRequest*>(received.data());
 
+                const char* operation_name = "UNKNOWN";
+                switch (request->operation)
+                {
+                    case RequestType::SET_INTERFACE_STATE:
+                        operation_name = request->up ? "UP" : "DOWN";
+                        break;
+                    case RequestType::CHECK_INTERFACE_STATE:
+                        operation_name = "CHECK_STATE";
+                        break;
+                    case RequestType::VALIDATE_CAN_HARDWARE:
+                        operation_name = "VALIDATE_CAN";
+                        break;
+                    case RequestType::CREATE_VCAN_INTERFACE:
+                        operation_name = "CREATE_VCAN";
+                        break;
+                }
+
                 std::cout << "Processing request for interface: " << request->interface_name
-                    << ", action: " << (request->up ? "UP" : "DOWN") << std::endl;
+                    << ", operation: " << operation_name << std::endl;
 
                 // 处理请求
                 auto response = process_request(*request);
@@ -320,12 +337,15 @@ namespace HyCAN
                 return validate_can_hardware_libnl(request.interface_name);
             case RequestType::CREATE_VCAN_INTERFACE:
             {
+                std::cout << "Processing CREATE_VCAN_INTERFACE for " << request.interface_name << std::endl;
                 auto vcan_result = create_vcan_interface_if_not_exists(request.interface_name);
                 if (!vcan_result)
                 {
+                    std::cout << "VCAN creation failed: " << vcan_result.error().message << std::endl;
                     return NetlinkResponse(-1, std::format("Failed to create VCAN interface {}: {}",
                                                            request.interface_name, vcan_result.error().message));
                 }
+                std::cout << "VCAN creation successful for " << request.interface_name << std::endl;
                 return NetlinkResponse(0, "VCAN interface created successfully");
             }
             default:
