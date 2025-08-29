@@ -1,0 +1,5 @@
+#ifndef HYCAN_DAEMON_HPP
+#define HYCAN_DAEMON_HPP
+
+
+#endif //HYCAN_DAEMON_HPP

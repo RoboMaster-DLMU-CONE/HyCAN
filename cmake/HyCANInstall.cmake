@@ -1,0 +1,31 @@
+
+install(TARGETS HyCAN
+        EXPORT HyCANTargets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+install(EXPORT HyCANTargets
+        FILE HyCANTargets.cmake
+        NAMESPACE HyCAN::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/HyCANConfigVersion.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY AnyNewerVersion
+)
+configure_package_config_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/HyCANConfig.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/HyCANConfig.cmake"
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+install(
+        FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/HyCANConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/HyCANConfigVersion.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
