@@ -1,8 +1,8 @@
 #pragma once
 
 #include <string_view>
-#include "HyCAN/Util/Error.hpp"
-#include "tl/expected.hpp"
+#include <HyCAN/Util/Error.hpp>
+#include <tl/expected.hpp>
 
 namespace HyCAN
 {
