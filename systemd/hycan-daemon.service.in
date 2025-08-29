@@ -1,0 +1,31 @@
+[Unit]
+Description=HyCAN Network Interface Management Daemon
+Documentation=https://github.com/RoboMaster-DLMU-CONE/HyCAN
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=@DAEMON_EXECUTABLE@ @DAEMON_SOCKET_PATH@
+Restart=always
+RestartSec=5
+User=root
+Group=root
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/run
+PrivateTmp=true
+
+# Network capabilities
+AmbientCapabilities=CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_ADMIN
+
+# Resource limits
+LimitNOFILE=1024
+MemoryMax=64M
+
+[Install]
+WantedBy=multi-user.target

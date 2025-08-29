@@ -10,6 +10,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(BUILD_HYCAN_EXAMPLE "Build HyCAN Examples" OFF)
 option(BUILD_HYCAN_TEST "Build HyCAN Tests" OFF)
+option(BUILD_HYCAN_DAEMON "Build HyCAN Daemon" ON)
 option(TEST_HYCAN_LATENCY "Adding Latency statistics for testing" OFF)
 
 include(HyCANFindLibnl3)
@@ -41,6 +42,10 @@ endif ()
 if (BUILD_HYCAN_TEST)
     enable_testing()
     include(HyCANTests)
+endif ()
+
+if (BUILD_HYCAN_DAEMON)
+    include(HyCANDaemon)
 endif ()
 
 if (TEST_HYCAN_LATENCY)
