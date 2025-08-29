@@ -8,14 +8,17 @@
     - **低延迟**：每条消息平均延迟低至**10us**
     - [详见InterfaceStressTest](tests/InterfaceStressTest.cpp)
 - 用户友好的API
-- 无需外置脚本，库内直接开关`Netlink`上的`CAN/VCAN`接口。
+- **无需root权限**：通过`HyCAN Daemon`系统服务，用户程序可以普通权限运行
+- **自动化接口管理**：库内通过守护进程直接开关`Netlink`上的`CAN/VCAN`接口
 
 ## 使用场景
 
 - 高实时性需求
     - 控制算法依赖 CAN 总线上大量电机的实时反馈帧
-- 减少部署复杂度
+- 减少部署复杂度和提升安全性
     - 避免每次运行程序前执行脚本手动启动 CAN/VCAN 接口
+    - 消除用户应用程序对root权限的依赖
+    - 通过守护进程集中管理CAN接口资源
 
 ## 接入工程
 
@@ -43,12 +46,12 @@
 sudo apt install pkg-config cmake libnl-3-dev libnl-nf-3-dev
 ```
 
-#### CMake构建
+#### CMake构建与安装
 
 ```shell
 cmake -S . -B build
 cmake --build build
-#可选：安装到系统
+# 安装到系统（包括HyCAN守护进程）
 sudo cmake --install build
 ```
 
@@ -82,6 +85,52 @@ add_executable(MyConsumerApp main.cpp)
 target_link_libraries(MyConsumerApp PRIVATE HyCAN::HyCAN)
 ```
 
+#### 运行你的应用
+
+现在你的应用可以以**普通用户权限**运行：
+
+```shell
+# 无需sudo！
+./MyConsumerApp
+```
+
+确保HyCAN守护进程正在运行：
+
+```shell
+# 如果守护进程未运行，启动它
+sudo systemctl start hycan-daemon
+```
+
+## 架构说明
+
+HyCAN采用守护进程架构：
+
+- **HyCAN Daemon**: 作为systemd服务运行，以root权限管理CAN/VCAN接口
+- **用户应用**: 通过IPC与守护进程通信，无需root权限即可操作CAN接口
+- **安全隔离**: 只有守护进程需要特权，用户代码运行在受限环境中
+
+## 故障排除
+
+### 守护进程相关问题
+
+```shell
+# 查看守护进程状态
+sudo systemctl status hycan-daemon
+
+# 查看守护进程日志
+sudo journalctl -u hycan-daemon -f
+
+# 重启守护进程
+sudo systemctl restart hycan-daemon
+```
+
+### 权限问题
+
+如果遇到权限相关错误，请确保：
+
+1. HyCAN守护进程已安装并运行
+2. 用户应用使用普通权限运行
+
 ## Todo
 
 - [ ] 更多示例和测试
@@ -91,3 +140,4 @@ target_link_libraries(MyConsumerApp PRIVATE HyCAN::HyCAN)
 ## Credit
 
 - [libnl](https://github.com/thom311/libnl)
+- [cpp-ipc](https://github.com/mutouyun/cpp-ipc)

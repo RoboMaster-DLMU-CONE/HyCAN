@@ -22,6 +22,6 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/hycan-daemon.service
 )
 
 install(
-        CODE "execute_process(COMMAND sudo systemctl enable hycan-daemon.service)"
+        CODE "execute_process(COMMAND sudo systemctl enable --now hycan-daemon.service)"
         CODE "execute_process(COMMAND sudo systemctl restart hycan-daemon.service)"
 )
