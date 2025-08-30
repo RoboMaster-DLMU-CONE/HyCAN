@@ -10,9 +10,7 @@
 #include <chrono>
 
 #include "UnixSocket/UnixSocket.hpp"
-
-struct nl_sock;
-struct nl_cache;
+#include "NetlinkManager.hpp"
 
 namespace HyCAN
 {
@@ -51,13 +49,10 @@ namespace HyCAN
         std::mutex sessions_mutex_;
         std::thread cleanup_thread_;
         
-        // Netlink management (singleton-like for the daemon)
-        nl_sock* nl_socket_{nullptr};
-        nl_cache* link_cache_{nullptr};
+        // Netlink management
+        std::unique_ptr<NetlinkManager> netlink_manager_;
 
         // Main daemon methods
-        int init_netlink();
-        void cleanup_netlink();
         void cleanup_sessions();
         void session_cleanup_worker();
         
@@ -66,13 +61,6 @@ namespace HyCAN
         void handle_client_registration(const ClientRegisterRequest& request, const std::unique_ptr<UnixSocket>& registration_socket);
         void client_session_worker(ClientSession* session);
         bool is_process_alive(pid_t pid) const;
-        
-        // Netlink operation methods
-        NetlinkResponse set_interface_state_libnl(std::string_view interface_name, bool up) const;
-        NetlinkResponse set_can_bitrate_libnl(std::string_view interface_name, uint32_t bitrate) const;
-        NetlinkResponse check_interface_exists(std::string_view interface_name) const;
-        NetlinkResponse check_interface_is_up(std::string_view interface_name) const;
-        NetlinkResponse process_request(const NetlinkRequest& request) const;
 
     public:
         Daemon();

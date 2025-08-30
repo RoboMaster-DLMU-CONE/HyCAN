@@ -2,6 +2,7 @@ add_subdirectory(UnixSocket)
 
 add_executable(HyCAN_Daemon
         Daemon.cpp
+        NetlinkManager.cpp
         VCAN.cpp
         main.cpp
 )
