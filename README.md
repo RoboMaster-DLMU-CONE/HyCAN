@@ -140,4 +140,3 @@ sudo systemctl restart hycan-daemon
 ## Credit
 
 - [libnl](https://github.com/thom311/libnl)
-- [cpp-ipc](https://github.com/mutouyun/cpp-ipc)

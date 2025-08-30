@@ -120,7 +120,7 @@ int main()
         g_received_message_counts[i].store(0, std::memory_order_relaxed);
     }
 
-    std::vector<std::unique_ptr<HyCAN::Interface>> hycan_interfaces;
+    std::vector<std::unique_ptr<HyCAN::VCANInterface>> hycan_interfaces;
     hycan_interfaces.reserve(NUM_INTERFACES);
 
     // 1. Create and Setup Interfaces
@@ -142,7 +142,7 @@ int main()
             std::dec << std::endl;
         try
         {
-            auto interface_ptr = std::make_unique<HyCAN::Interface>(if_name);
+            auto interface_ptr = std::make_unique<HyCAN::VCANInterface>(if_name);
 
             // Register callback BEFORE calling up()
             auto callback_for_interface =

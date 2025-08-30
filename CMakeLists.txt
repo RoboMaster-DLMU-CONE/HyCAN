@@ -14,7 +14,6 @@ option(TEST_HYCAN_LATENCY "Adding Latency statistics for testing" OFF)
 
 include(HyCANFindLibnl3)
 include(HyCANFindTlExpected)
-include(HyCANFindCppIpc)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 

@@ -3,6 +3,7 @@
 
 #include <string>
 #include <set>
+#include <cstdint>
 #include "CanFrameConvertible.hpp"
 #include "Netlink.hpp"
 #include "Reaper.hpp"
@@ -11,13 +12,22 @@
 
 namespace HyCAN
 {
+    enum class InterfaceType
+    {
+        CAN,
+        VCAN
+    };
+
+    template<InterfaceType Type = InterfaceType::CAN>
     class Interface
     {
     public:
         explicit Interface(const std::string& interface_name);
         Interface() = delete;
-        tl::expected<void, Error> up();
+        tl::expected<void, Error> up(uint32_t bitrate = 1000000);
         tl::expected<void, Error> down();
+        tl::expected<bool, Error> exists();
+        tl::expected<bool, Error> state();
 
         template <CanFrameConvertible T>
         tl::expected<void, Error> send(T frame)
@@ -40,10 +50,13 @@ namespace HyCAN
 
     private:
         std::string interface_name;
-        Netlink netlink;
         Reaper reaper;
         Sender sender;
     };
+
+    // Type aliases for common usage
+    using VCANInterface = Interface<InterfaceType::VCAN>;
+    using CANInterface = Interface<InterfaceType::CAN>;
 }
 
 #endif //INTERFACE_HPP
