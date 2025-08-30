@@ -14,10 +14,10 @@
 #include <netlink/route/link.h>
 #include <netlink/route/link/can.h>
 
-#include "libipc/ipc.h"
 #include "HyCAN/Daemon/Message.hpp"
 #include "HyCAN/Daemon/Daemon.hpp"
 #include "HyCAN/Daemon/VCAN.hpp"
+#include "HyCAN/Util/UnixSocket.hpp"
 
 namespace HyCAN
 {
@@ -26,6 +26,13 @@ namespace HyCAN
         if (init_netlink() < 0)
         {
             throw std::runtime_error("Failed to initialize netlink in daemon");
+        }
+        
+        // Initialize main socket
+        main_socket_ = std::make_unique<UnixSocket>("daemon", UnixSocket::SERVER);
+        if (!main_socket_->initialize())
+        {
+            throw std::runtime_error("Failed to initialize main daemon socket");
         }
         
         // Start cleanup thread
@@ -46,29 +53,36 @@ namespace HyCAN
             return 1;
         }
 
-        std::cout << "HyCAN Daemon started, listening on channel 'HyCAN_Daemon'..." << std::endl;
+        std::cout << "HyCAN Daemon started, listening on socket..." << std::endl;
 
         while (running_.load(std::memory_order_acquire))
         {
             try
             {
-                // Wait for client requests with 1 second timeout
-                auto received = main_channel_.recv(1000);
-
-                if (received.empty())
+                // Accept incoming connections with timeout
+                auto client_socket = main_socket_->accept(1000); // 1 second timeout
+                if (!client_socket)
                 {
-                    continue; // Timeout, continue checking stop flag
+                    // No incoming connection within timeout, continue
+                    continue;
                 }
 
-                // Handle client registration requests
-                if (received.size() == sizeof(ClientRegisterRequest))
+                // Receive registration request
+                ClientRegisterRequest register_request;
+                ssize_t bytes_received = client_socket->recv(&register_request, sizeof(register_request), 1000);
+                
+                if (bytes_received == sizeof(ClientRegisterRequest))
                 {
-                    const auto* register_request = static_cast<const ClientRegisterRequest*>(received.data());
-                    handle_client_registration(*register_request);
+                    handle_client_registration(register_request, std::move(client_socket));
+                }
+                else if (bytes_received == 0)
+                {
+                    // Timeout, continue
+                    continue;
                 }
                 else
                 {
-                    std::cerr << "Received invalid request size: " << received.size() 
+                    std::cerr << "Received invalid request size: " << bytes_received 
                               << " (expected: " << sizeof(ClientRegisterRequest) << ")" << std::endl;
                 }
             }
@@ -99,7 +113,7 @@ namespace HyCAN
         return std::format("HyCAN_Client_{}", client_pid);
     }
 
-    void Daemon::handle_client_registration(const ClientRegisterRequest& request)
+    void Daemon::handle_client_registration(const ClientRegisterRequest& request, std::unique_ptr<UnixSocket> registration_socket)
     {
         std::lock_guard<std::mutex> lock(sessions_mutex_);
         
@@ -120,8 +134,14 @@ namespace HyCAN
             
             try
             {
-                // Create dedicated channel for this client
-                session->channel = std::make_unique<ipc::channel>(session->channel_name.c_str(), ipc::receiver);
+                // Create dedicated socket for this client
+                session->socket = std::make_unique<UnixSocket>(session->channel_name, UnixSocket::SERVER);
+                
+                if (!session->socket->initialize())
+                {
+                    std::cerr << "Failed to initialize client socket: " << session->channel_name << std::endl;
+                    return;
+                }
                 
                 // Store session first
                 auto* session_ptr = session.get();
@@ -131,25 +151,21 @@ namespace HyCAN
                 session_ptr->worker_thread = std::make_unique<std::thread>(&Daemon::client_session_worker, this, 
                                                                           session_ptr);
                 
-                std::cout << "Created dedicated channel: " << client_sessions_[request.client_pid]->channel_name << std::endl;
+                std::cout << "Created dedicated socket: " << client_sessions_[request.client_pid]->channel_name << std::endl;
             }
             catch (const std::exception& e)
             {
                 std::cerr << "Failed to create client session: " << e.what() << std::endl;
+                return;
             }
         }
         
         // Send response with channel name
         ClientRegisterResponse response(0, client_sessions_[request.client_pid]->channel_name);
-        auto response_data = ipc::buff_t{reinterpret_cast<ipc::byte_t*>(&response), sizeof(response)};
         
-        try
+        if (registration_socket->send(&response, sizeof(response)) < 0)
         {
-            main_channel_.send(response_data);
-        }
-        catch (const std::exception& e)
-        {
-            std::cerr << "Failed to send registration response: " << e.what() << std::endl;
+            std::cerr << "Failed to send registration response to client " << request.client_pid << std::endl;
         }
     }
 
@@ -161,33 +177,42 @@ namespace HyCAN
         {
             try
             {
-                auto received = session->channel->recv(1000); // 1 second timeout
+                // Accept incoming connection from client with timeout
+                auto client_connection = session->socket->accept(1000); // 1 second timeout
+                if (!client_connection)
+                {
+                    continue; // timeout, continue checking the running flags
+                }
                 
-                if (received.empty())
+                // Receive request
+                NetlinkRequest request;
+                ssize_t bytes_received = client_connection->recv(&request, sizeof(request), 1000);
+                
+                if (bytes_received == 0)
                 {
                     continue; // Timeout, continue
                 }
                 
-                session->last_activity = std::chrono::steady_clock::now();
-                
-                if (received.size() != sizeof(NetlinkRequest))
+                if (bytes_received != sizeof(NetlinkRequest))
                 {
                     std::cerr << "Client " << session->client_pid << " sent invalid request size: " 
-                              << received.size() << std::endl;
+                              << bytes_received << std::endl;
                     continue;
                 }
                 
-                const auto* request = static_cast<const NetlinkRequest*>(received.data());
+                session->last_activity = std::chrono::steady_clock::now();
                 
                 std::cout << "Processing request from client " << session->client_pid 
-                          << " for interface: " << request->interface_name << std::endl;
+                          << " for interface: " << request.interface_name << std::endl;
                 
                 // Process the request
-                auto response = process_request(*request);
+                auto response = process_request(request);
                 
                 // Send response
-                auto response_data = ipc::buff_t{reinterpret_cast<ipc::byte_t*>(&response), sizeof(response)};
-                session->channel->send(response_data);
+                if (client_connection->send(&response, sizeof(response)) < 0)
+                {
+                    std::cerr << "Failed to send response to client " << session->client_pid << std::endl;
+                }
             }
             catch (const std::exception& e)
             {

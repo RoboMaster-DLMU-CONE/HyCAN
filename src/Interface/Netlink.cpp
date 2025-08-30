@@ -1,5 +1,6 @@
 #include "HyCAN/Interface/Netlink.hpp"
 #include "HyCAN/Daemon/Message.hpp"
+#include "HyCAN/Util/UnixSocket.hpp"
 
 #include <stdexcept>
 #include <format>
@@ -7,8 +8,6 @@
 #include <net/if.h>
 #include <unistd.h>
 #include <memory>
-
-#include <libipc/ipc.h>
 
 using tl::unexpected, std::string_view;
 
@@ -20,20 +19,10 @@ namespace HyCAN
     class NetlinkClient
     {
     private:
-        std::string main_channel_name_;
         std::string client_channel_name_;
-        std::unique_ptr<ipc::channel> main_channel_;
-        std::unique_ptr<ipc::channel> client_channel_;
         bool registered_{false};
 
     public:
-        ~NetlinkClient()
-        {
-            // Explicit cleanup to ensure proper order
-            client_channel_.reset();
-            main_channel_.reset();
-        }
-
         tl::expected<void, Error> ensure_registered()
         {
             if (registered_)
@@ -43,17 +32,19 @@ namespace HyCAN
 
             try
             {
-                // Create main channel for registration
-                main_channel_ = std::make_unique<ipc::channel>("HyCAN_Daemon", ipc::sender | ipc::receiver);
+                // Create socket for registration
+                auto registration_socket = std::make_unique<UnixSocket>("daemon", UnixSocket::CLIENT);
+                if (!registration_socket->initialize())
+                {
+                    return unexpected(Error{
+                        ErrorCode::NetlinkBringUpError,
+                        "Failed to connect to daemon for registration"
+                    });
+                }
 
                 // Send registration request
                 ClientRegisterRequest register_request(getpid());
-                auto request_data = ipc::buff_t{
-                    reinterpret_cast<ipc::byte_t*>(&register_request),
-                    sizeof(register_request)
-                };
-
-                if (!main_channel_->send(request_data))
+                if (registration_socket->send(&register_request, sizeof(register_request)) < 0)
                 {
                     return unexpected(Error{
                         ErrorCode::NetlinkBringUpError,
@@ -62,8 +53,10 @@ namespace HyCAN
                 }
 
                 // Receive registration response
-                auto response_data = main_channel_->recv(5000); // 5 second timeout
-                if (response_data.empty() || response_data.size() != sizeof(ClientRegisterResponse))
+                ClientRegisterResponse response;
+                ssize_t bytes_received = registration_socket->recv(&response, sizeof(response), 5000);
+                
+                if (bytes_received != sizeof(ClientRegisterResponse))
                 {
                     return unexpected(Error{
                         ErrorCode::NetlinkBringUpError,
@@ -71,8 +64,7 @@ namespace HyCAN
                     });
                 }
 
-                const auto* response = static_cast<const ClientRegisterResponse*>(response_data.data());
-                if (response->result != 0)
+                if (response.result != 0)
                 {
                     return unexpected(Error{
                         ErrorCode::NetlinkBringUpError,
@@ -80,10 +72,8 @@ namespace HyCAN
                     });
                 }
 
-                // Set up client channel
-                client_channel_name_ = response->client_channel_name;
-                client_channel_ = std::make_unique<ipc::channel>(client_channel_name_.c_str(), ipc::sender | ipc::receiver);
-
+                // Set up client channel name
+                client_channel_name_ = response.client_channel_name;
                 registered_ = true;
                 return {};
             }
@@ -106,13 +96,18 @@ namespace HyCAN
 
             try
             {
-                // Send request
-                auto request_data = ipc::buff_t{
-                    reinterpret_cast<ipc::byte_t*>(const_cast<NetlinkRequest*>(&request)),
-                    sizeof(request)
-                };
+                // Create client socket connection
+                auto client_socket = std::make_unique<UnixSocket>(client_channel_name_, UnixSocket::CLIENT);
+                if (!client_socket->initialize())
+                {
+                    return unexpected(Error{
+                        ErrorCode::NetlinkBringUpError,
+                        "Failed to connect to daemon client channel"
+                    });
+                }
 
-                if (!client_channel_->send(request_data))
+                // Send request
+                if (client_socket->send(&request, sizeof(request)) < 0)
                 {
                     return unexpected(Error{
                         ErrorCode::NetlinkBringUpError,
@@ -121,8 +116,10 @@ namespace HyCAN
                 }
 
                 // Receive response
-                auto response_data = client_channel_->recv(5000); // 5 second timeout
-                if (response_data.empty() || response_data.size() != sizeof(NetlinkResponse))
+                NetlinkResponse response;
+                ssize_t bytes_received = client_socket->recv(&response, sizeof(response), 5000);
+                
+                if (bytes_received != sizeof(NetlinkResponse))
                 {
                     return unexpected(Error{
                         ErrorCode::NetlinkBringUpError,
@@ -130,8 +127,7 @@ namespace HyCAN
                     });
                 }
 
-                const auto* response = static_cast<const NetlinkResponse*>(response_data.data());
-                return *response;
+                return response;
             }
             catch (const std::exception& e)
             {

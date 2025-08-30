@@ -9,7 +9,7 @@
 #include <mutex>
 #include <chrono>
 
-#include "libipc/ipc.h"
+#include "HyCAN/Util/UnixSocket.hpp"
 
 struct nl_sock;
 struct nl_cache;
@@ -28,7 +28,7 @@ namespace HyCAN
     {
         pid_t client_pid;
         std::string channel_name;
-        std::unique_ptr<ipc::channel> channel;
+        std::unique_ptr<UnixSocket> socket;
         std::unique_ptr<std::thread> worker_thread;
         std::chrono::steady_clock::time_point last_activity;
         std::atomic<bool> running{true};
@@ -44,7 +44,7 @@ namespace HyCAN
     class Daemon
     {
         std::atomic<bool> running_{true};
-        ipc::channel main_channel_{"HyCAN_Daemon", ipc::receiver};
+        std::unique_ptr<UnixSocket> main_socket_;
         
         // Client session management
         std::unordered_map<pid_t, std::unique_ptr<ClientSession>> client_sessions_;
@@ -63,7 +63,7 @@ namespace HyCAN
         
         // Client session methods
         std::string generate_client_channel_name(pid_t client_pid);
-        void handle_client_registration(const ClientRegisterRequest& request);
+        void handle_client_registration(const ClientRegisterRequest& request, std::unique_ptr<UnixSocket> registration_socket);
         void client_session_worker(ClientSession* session);
         bool is_process_alive(pid_t pid) const;
         

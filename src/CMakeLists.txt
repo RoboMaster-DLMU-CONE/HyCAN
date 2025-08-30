@@ -1,6 +1,6 @@
 add_subdirectory(Daemon)
 
-file(GLOB_RECURSE HYCAN_SOURCES Interface/*.cpp)
+file(GLOB_RECURSE HYCAN_SOURCES Interface/*.cpp Util/*.cpp)
 add_library(HyCAN)
 target_sources(HyCAN PRIVATE ${HYCAN_SOURCES})
 
@@ -17,5 +17,4 @@ target_include_directories(HyCAN
 )
 target_link_libraries(HyCAN
         PUBLIC ${LIBNL3_LIBRARIES} tl::expected
-        PRIVATE cpp-ipc::ipc
 )
