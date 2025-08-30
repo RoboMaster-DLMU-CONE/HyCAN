@@ -29,8 +29,10 @@ namespace HyCAN
     struct ClientRegisterRequest
     {
         pid_t client_pid;
-        
-        explicit ClientRegisterRequest(pid_t pid = 0) : client_pid(pid) {}
+
+        explicit ClientRegisterRequest(pid_t pid = 0) : client_pid(pid)
+        {
+        }
     };
 
     /**
@@ -40,7 +42,7 @@ namespace HyCAN
     {
         int result;
         char client_channel_name[64]{};
-        
+
         explicit ClientRegisterResponse(int res = 0, const std::string_view channel_name = "")
             : result(res)
         {
@@ -61,14 +63,13 @@ namespace HyCAN
         bool up{};
         bool set_bitrate{};
         uint32_t bitrate{};
-        bool create_vcan_if_needed{};
         char interface_name[IFNAMSIZ]{}; // 使用固定大小的字符数组
 
         NetlinkRequest() = default;
 
         explicit NetlinkRequest(const std::string_view name, const bool state, const bool bitrate_flag = false,
-                                const uint32_t rate = 1000000, const bool create_vcan = false)
-            : up(state), set_bitrate(bitrate_flag), bitrate(rate), create_vcan_if_needed(create_vcan)
+                                const uint32_t rate = 1000000)
+            : up(state), set_bitrate(bitrate_flag), bitrate(rate)
         {
             std::strncpy(interface_name, name.data(), sizeof interface_name - 1);
             interface_name[sizeof interface_name - 1] = 0;
@@ -89,8 +90,8 @@ namespace HyCAN
     struct NetlinkResponse
     {
         int result;
-        bool exists{false};  // For interface exists query
-        bool is_up{false};   // For interface up status query
+        bool exists{false}; // For interface exists query
+        bool is_up{false}; // For interface up status query
         char error_message[256]{};
 
         explicit NetlinkResponse(const int res = 0, const std::string_view msg = "") : result(res)
@@ -104,7 +105,9 @@ namespace HyCAN
 
         // Constructor for query responses
         explicit NetlinkResponse(const int res, bool interface_exists, bool interface_up)
-            : result(res), exists(interface_exists), is_up(interface_up) {}
+            : result(res), exists(interface_exists), is_up(interface_up)
+        {
+        }
     };
 } // namespace HyCAN
 

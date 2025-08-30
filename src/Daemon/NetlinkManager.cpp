@@ -74,12 +74,12 @@ namespace HyCAN
 
         rtnl_link* link = rtnl_link_get_by_name(link_cache_, std::string(interface_name).c_str());
         const bool exists = (link != nullptr);
-        
+
         if (link)
         {
             rtnl_link_put(link);
         }
-        
+
         return NetlinkResponse(0, exists, false);
     }
 
@@ -94,13 +94,13 @@ namespace HyCAN
         rtnl_link* link = rtnl_link_get_by_name(link_cache_, std::string(interface_name).c_str());
         const bool exists = (link != nullptr);
         bool is_up = false;
-        
+
         if (link)
         {
             is_up = (rtnl_link_get_flags(link) & IFF_UP) != 0;
             rtnl_link_put(link);
         }
-        
+
         return NetlinkResponse(0, exists, is_up);
     }
 
@@ -116,6 +116,15 @@ namespace HyCAN
         if (!link)
         {
             return NetlinkResponse(-1, std::format("Interface {} not found", interface_name));
+        }
+
+        // Check if the interface is already in the desired state
+        const bool is_currently_up = (rtnl_link_get_flags(link) & IFF_UP) != 0;
+        if (is_currently_up == up)
+        {
+            rtnl_link_put(link);
+            const std::string status = up ? "up" : "down";
+            return NetlinkResponse(0, std::format("Interface {} is already {}", interface_name, status));
         }
 
         rtnl_link* change = rtnl_link_alloc();
@@ -199,13 +208,13 @@ namespace HyCAN
     {
         switch (request.operation)
         {
-            case RequestType::INTERFACE_EXISTS:
-                return check_interface_exists(request.interface_name);
-            
-            case RequestType::INTERFACE_IS_UP:
-                return check_interface_is_up(request.interface_name);
-            
-            case RequestType::CREATE_VCAN_INTERFACE:
+        case RequestType::INTERFACE_EXISTS:
+            return check_interface_exists(request.interface_name);
+
+        case RequestType::INTERFACE_IS_UP:
+            return check_interface_is_up(request.interface_name);
+
+        case RequestType::CREATE_VCAN_INTERFACE:
             {
                 auto vcan_result = create_vcan_interface_if_not_exists(request.interface_name);
                 if (!vcan_result)
@@ -215,33 +224,47 @@ namespace HyCAN
                 }
                 return NetlinkResponse(0, "VCAN interface created successfully");
             }
-            
-            case RequestType::SET_INTERFACE_STATE:
-            default:
-                // Create VCAN interface if needed
-                if (request.create_vcan_if_needed)
-                {
-                    auto vcan_result = create_vcan_interface_if_not_exists(request.interface_name);
-                    if (!vcan_result)
-                    {
-                        return NetlinkResponse(-1, std::format("Failed to create VCAN interface {}: {}",
-                                                               request.interface_name, vcan_result.error().message));
-                    }
-                }
 
-                // 如果需要设置比特率（仅对 CAN 接口）
+        case RequestType::SET_INTERFACE_STATE:
+            {
+                // 如果请求是设置接口为 "up" 状态并且需要设置比特率
                 if (request.up && request.set_bitrate)
                 {
+                    // 检查接口当前是否已经 "up"
+                    auto is_up_response = check_interface_is_up(request.interface_name);
+                    if (is_up_response.result != 0)
+                    {
+                        // 如果检查失败，直接返回错误
+                        return is_up_response;
+                    }
+
+                    // 如果接口已经 "up"，则需要先 "down" 再设置比特率
+                    if (is_up_response.is_up)
+                    {
+                        auto down_result = set_interface_state_libnl(request.interface_name, false);
+                        if (down_result.result != 0)
+                        {
+                            return NetlinkResponse(down_result.result,
+                                                   std::format(
+                                                       "Failed to bring down interface {} before setting bitrate: {}",
+                                                       request.interface_name, down_result.error_message));
+                        }
+                    }
+
+                    // 设置比特率
                     const auto bitrate_result = set_can_bitrate_libnl(request.interface_name, request.bitrate);
                     if (bitrate_result.result != 0)
                     {
+                        // 如果设置比特率失败，返回错误，此时接口已经是 "down" 状态
                         return bitrate_result;
                     }
                 }
 
-                // 设置接口状态
+                // 最后，根据请求设置接口状态 (up/down)
                 return set_interface_state_libnl(request.interface_name, request.up);
+            }
+        default:
+            return NetlinkResponse(-1, "Unknown request operation");
         }
     }
-
 } // namespace HyCAN

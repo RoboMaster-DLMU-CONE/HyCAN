@@ -43,7 +43,7 @@ namespace HyCAN
             // Receive registration response
             ClientRegisterResponse response;
             const ssize_t bytes_received = registration_socket->recv(&response, sizeof(response), 5000);
-            
+
             if (bytes_received != sizeof(ClientRegisterResponse))
             {
                 return unexpected(Error{
@@ -106,7 +106,7 @@ namespace HyCAN
             // Receive response
             NetlinkResponse response;
             const ssize_t bytes_received = client_socket->recv(&response, sizeof(response), 5000);
-            
+
             if (bytes_received != sizeof(NetlinkResponse))
             {
                 return unexpected(Error{
@@ -126,7 +126,8 @@ namespace HyCAN
         }
     }
 
-    tl::expected<void, Error> NetlinkClient::fallback_system_call(std::string_view interface_name, const bool state, const uint32_t bitrate)
+    tl::expected<void, Error> NetlinkClient::fallback_system_call(std::string_view interface_name, const bool state,
+                                                                  const uint32_t bitrate)
     {
         std::string command;
         if (state)
@@ -163,16 +164,15 @@ namespace HyCAN
         return {};
     }
 
-    tl::expected<void, Error> NetlinkClient::set_interface_state(const std::string_view interface_name, const bool up, const uint32_t bitrate)
+    tl::expected<void, Error> NetlinkClient::set_interface_state(const std::string_view interface_name, const bool up,
+                                                                 const uint32_t bitrate)
     {
         const bool is_can_interface = interface_name.starts_with("can");
-        const bool needs_vcan_creation = interface_name.starts_with("vcan");
-        const NetlinkRequest request{interface_name, up, is_can_interface && up, bitrate, needs_vcan_creation};
+        const NetlinkRequest request{interface_name, up, is_can_interface && up, bitrate};
 
         auto response_result = send_request(request);
         if (!response_result)
         {
-            // Fallback to system call
             return fallback_system_call(interface_name, up, bitrate);
         }
 

@@ -58,11 +58,7 @@ int main()
                                .and_then([&]
                                 {
                                     std::cout << "Bringing up 'can0' with bitrate 1000000..." << std::endl;
-                                    return can_interface.is_up().and_then([&](const bool r)
-                                    {
-                                        if (!r) return can_interface.up(1000000); // Set bitrate to 1000kbps
-                                        return tl::expected<void, HyCAN::Error>{};
-                                    });
+                                    return can_interface.up(1000000);
                                 });
 
     if (!result)
