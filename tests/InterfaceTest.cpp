@@ -69,7 +69,7 @@ int main()
     std::cout << "INFO: Ensure 'vcan' module is loaded (sudo modprobe vcan)." << std::endl;
     std::cout << "INFO: This test may require CAP_NET_ADMIN or root privileges to manage the interface." << std::endl;
 
-    HyCAN::Interface interface(TEST_INTERFACE_NAME);
+    HyCAN::VCANInterface interface(TEST_INTERFACE_NAME);
 
     // Prepare the frame to be sent
     can_frame frame_to_send{};
