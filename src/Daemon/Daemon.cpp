@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <format>
 #include <net/if.h>
+#include <sys/ioctl.h>
+#include <cstring>
 
 #include <netlink/cache.h>
 #include <netlink/errno.h>
@@ -25,6 +27,9 @@ namespace HyCAN
         {
             throw std::runtime_error("Failed to initialize netlink in daemon");
         }
+        
+        // Start cleanup thread
+        cleanup_thread_ = std::thread(&Daemon::session_cleanup_worker, this);
     }
 
     Daemon::~Daemon()
@@ -47,53 +52,33 @@ namespace HyCAN
         {
             try
             {
-                // 等待客户端请求，超时 1 秒检查停止标志
-                auto received = channel_.recv(1000); // 1000ms 超时
+                // Wait for client requests with 1 second timeout
+                auto received = main_channel_.recv(1000);
 
                 if (received.empty())
                 {
-                    continue; // 超时，继续检查停止标志
+                    continue; // Timeout, continue checking stop flag
                 }
 
-                // 解析请求
-                if (received.size() != sizeof(NetlinkRequest))
+                // Handle client registration requests
+                if (received.size() == sizeof(ClientRegisterRequest))
                 {
-                    std::cerr << "Received invalid request size: " << received.size() << std::endl;
-                    continue;
+                    const auto* register_request = static_cast<const ClientRegisterRequest*>(received.data());
+                    handle_client_registration(*register_request);
                 }
-
-                const auto* request = static_cast<const NetlinkRequest*>(received.data());
-
-                std::cout << "Processing request for interface: " << request->interface_name
-                    << ", action: " << (request->up ? "UP" : "DOWN") << std::endl;
-
-                // 处理请求
-                auto response = process_request(*request);
-
-                // 发送响应
-                auto response_data = ipc::buff_t{reinterpret_cast<ipc::byte_t*>(&response), sizeof(response)};
-                channel_.send(response_data);
+                else
+                {
+                    std::cerr << "Received invalid request size: " << received.size() 
+                              << " (expected: " << sizeof(ClientRegisterRequest) << ")" << std::endl;
+                }
             }
             catch (const std::exception& e)
             {
                 std::cerr << "Exception in daemon main loop: " << e.what() << std::endl;
-
-                // 发送错误响应
-                NetlinkResponse error_response(-1, std::format("Daemon exception: {}", e.what()));
-                auto error_data = ipc::buff_t{
-                    reinterpret_cast<ipc::byte_t*>(&error_response), sizeof(error_response)
-                };
-                try
-                {
-                    channel_.send(error_data);
-                }
-                catch (...)
-                {
-                    // 忽略发送错误
-                }
             }
         }
 
+        cleanup_sessions();
         std::cout << "HyCAN Daemon stopped." << std::endl;
         return 0;
     }
@@ -101,6 +86,175 @@ namespace HyCAN
     void Daemon::stop()
     {
         running_.store(false, std::memory_order_release);
+        
+        // Join cleanup thread
+        if (cleanup_thread_.joinable())
+        {
+            cleanup_thread_.join();
+        }
+    }
+
+    std::string Daemon::generate_client_channel_name(pid_t client_pid)
+    {
+        return std::format("HyCAN_Client_{}", client_pid);
+    }
+
+    void Daemon::handle_client_registration(const ClientRegisterRequest& request)
+    {
+        std::lock_guard<std::mutex> lock(sessions_mutex_);
+        
+        std::cout << "Registering client with PID: " << request.client_pid << std::endl;
+        
+        // Check if client already exists
+        if (client_sessions_.find(request.client_pid) != client_sessions_.end())
+        {
+            std::cout << "Client " << request.client_pid << " already registered, updating..." << std::endl;
+            // Update last activity time
+            client_sessions_[request.client_pid]->last_activity = std::chrono::steady_clock::now();
+        }
+        else
+        {
+            // Create new client session
+            auto session = std::make_unique<ClientSession>(request.client_pid, 
+                                                         generate_client_channel_name(request.client_pid));
+            
+            try
+            {
+                // Create dedicated channel for this client
+                session->channel = std::make_unique<ipc::channel>(session->channel_name.c_str(), ipc::receiver);
+                
+                // Store session first
+                auto* session_ptr = session.get();
+                client_sessions_[request.client_pid] = std::move(session);
+                
+                // Create worker thread for this client
+                session_ptr->worker_thread = std::make_unique<std::thread>(&Daemon::client_session_worker, this, 
+                                                                          session_ptr);
+                
+                std::cout << "Created dedicated channel: " << client_sessions_[request.client_pid]->channel_name << std::endl;
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "Failed to create client session: " << e.what() << std::endl;
+            }
+        }
+        
+        // Send response with channel name
+        ClientRegisterResponse response(0, client_sessions_[request.client_pid]->channel_name);
+        auto response_data = ipc::buff_t{reinterpret_cast<ipc::byte_t*>(&response), sizeof(response)};
+        
+        try
+        {
+            main_channel_.send(response_data);
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "Failed to send registration response: " << e.what() << std::endl;
+        }
+    }
+
+    void Daemon::client_session_worker(ClientSession* session)
+    {
+        std::cout << "Starting worker thread for client " << session->client_pid << std::endl;
+        
+        while (session->running.load() && running_.load())
+        {
+            try
+            {
+                auto received = session->channel->recv(1000); // 1 second timeout
+                
+                if (received.empty())
+                {
+                    continue; // Timeout, continue
+                }
+                
+                session->last_activity = std::chrono::steady_clock::now();
+                
+                if (received.size() != sizeof(NetlinkRequest))
+                {
+                    std::cerr << "Client " << session->client_pid << " sent invalid request size: " 
+                              << received.size() << std::endl;
+                    continue;
+                }
+                
+                const auto* request = static_cast<const NetlinkRequest*>(received.data());
+                
+                std::cout << "Processing request from client " << session->client_pid 
+                          << " for interface: " << request->interface_name << std::endl;
+                
+                // Process the request
+                auto response = process_request(*request);
+                
+                // Send response
+                auto response_data = ipc::buff_t{reinterpret_cast<ipc::byte_t*>(&response), sizeof(response)};
+                session->channel->send(response_data);
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "Exception in client worker " << session->client_pid << ": " << e.what() << std::endl;
+            }
+        }
+        
+        std::cout << "Worker thread for client " << session->client_pid << " stopped" << std::endl;
+    }
+
+    void Daemon::session_cleanup_worker()
+    {
+        constexpr auto cleanup_interval = std::chrono::seconds(30);
+        constexpr auto session_timeout = std::chrono::minutes(5);
+        
+        while (running_.load())
+        {
+            std::this_thread::sleep_for(cleanup_interval);
+            
+            std::lock_guard<std::mutex> lock(sessions_mutex_);
+            auto now = std::chrono::steady_clock::now();
+            
+            for (auto it = client_sessions_.begin(); it != client_sessions_.end();)
+            {
+                auto& session = it->second;
+                
+                // Check if process is still alive and if session has timed out
+                if (!is_process_alive(session->client_pid) || 
+                    (now - session->last_activity) > session_timeout)
+                {
+                    std::cout << "Cleaning up session for client " << session->client_pid << std::endl;
+                    
+                    session->running.store(false);
+                    if (session->worker_thread && session->worker_thread->joinable())
+                    {
+                        session->worker_thread->join();
+                    }
+                    
+                    it = client_sessions_.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+        }
+    }
+
+    void Daemon::cleanup_sessions()
+    {
+        std::lock_guard<std::mutex> lock(sessions_mutex_);
+        
+        for (auto& [pid, session] : client_sessions_)
+        {
+            session->running.store(false);
+            if (session->worker_thread && session->worker_thread->joinable())
+            {
+                session->worker_thread->join();
+            }
+        }
+        
+        client_sessions_.clear();
+    }
+
+    bool Daemon::is_process_alive(pid_t pid) const
+    {
+        return kill(pid, 0) == 0;
     }
 
     int Daemon::init_netlink()
@@ -143,6 +297,46 @@ namespace HyCAN
             nl_socket_free(nl_socket_);
             nl_socket_ = nullptr;
         }
+    }
+
+    NetlinkResponse Daemon::check_interface_exists(std::string_view interface_name) const
+    {
+        // Refresh cache to get latest state
+        if (nl_cache_refill(nl_socket_, link_cache_) < 0)
+        {
+            return NetlinkResponse(-1, false, false);
+        }
+
+        rtnl_link* link = rtnl_link_get_by_name(link_cache_, std::string(interface_name).c_str());
+        bool exists = (link != nullptr);
+        
+        if (link)
+        {
+            rtnl_link_put(link);
+        }
+        
+        return NetlinkResponse(0, exists, false);
+    }
+
+    NetlinkResponse Daemon::check_interface_is_up(std::string_view interface_name) const
+    {
+        // Refresh cache to get latest state
+        if (nl_cache_refill(nl_socket_, link_cache_) < 0)
+        {
+            return NetlinkResponse(-1, false, false);
+        }
+
+        rtnl_link* link = rtnl_link_get_by_name(link_cache_, std::string(interface_name).c_str());
+        bool exists = (link != nullptr);
+        bool is_up = false;
+        
+        if (link)
+        {
+            is_up = (rtnl_link_get_flags(link) & IFF_UP) != 0;
+            rtnl_link_put(link);
+        }
+        
+        return NetlinkResponse(0, exists, is_up);
     }
 
     NetlinkResponse Daemon::set_interface_state_libnl(std::string_view interface_name, const bool up) const
@@ -238,28 +432,50 @@ namespace HyCAN
 
     NetlinkResponse Daemon::process_request(const NetlinkRequest& request) const
     {
-        // Create VCAN interface if needed
-        if (request.create_vcan_if_needed)
+        switch (request.operation)
         {
-            auto vcan_result = create_vcan_interface_if_not_exists(request.interface_name);
-            if (!vcan_result)
+            case RequestType::INTERFACE_EXISTS:
+                return check_interface_exists(request.interface_name);
+            
+            case RequestType::INTERFACE_IS_UP:
+                return check_interface_is_up(request.interface_name);
+            
+            case RequestType::CREATE_VCAN_INTERFACE:
             {
-                return NetlinkResponse(-1, std::format("Failed to create VCAN interface {}: {}",
-                                                       request.interface_name, vcan_result.error().message));
+                auto vcan_result = create_vcan_interface_if_not_exists(request.interface_name);
+                if (!vcan_result)
+                {
+                    return NetlinkResponse(-1, std::format("Failed to create VCAN interface {}: {}",
+                                                           request.interface_name, vcan_result.error().message));
+                }
+                return NetlinkResponse(0, "VCAN interface created successfully");
             }
-        }
+            
+            case RequestType::SET_INTERFACE_STATE:
+            default:
+                // Create VCAN interface if needed
+                if (request.create_vcan_if_needed)
+                {
+                    auto vcan_result = create_vcan_interface_if_not_exists(request.interface_name);
+                    if (!vcan_result)
+                    {
+                        return NetlinkResponse(-1, std::format("Failed to create VCAN interface {}: {}",
+                                                               request.interface_name, vcan_result.error().message));
+                    }
+                }
 
-        // 如果需要设置比特率（仅对 CAN 接口）
-        if (request.up && request.set_bitrate)
-        {
-            const auto bitrate_result = set_can_bitrate_libnl(request.interface_name, request.bitrate);
-            if (bitrate_result.result != 0)
-            {
-                return bitrate_result;
-            }
-        }
+                // 如果需要设置比特率（仅对 CAN 接口）
+                if (request.up && request.set_bitrate)
+                {
+                    const auto bitrate_result = set_can_bitrate_libnl(request.interface_name, request.bitrate);
+                    if (bitrate_result.result != 0)
+                    {
+                        return bitrate_result;
+                    }
+                }
 
-        // 设置接口状态
-        return set_interface_state_libnl(request.interface_name, request.up);
+                // 设置接口状态
+                return set_interface_state_libnl(request.interface_name, request.up);
+        }
     }
 }
