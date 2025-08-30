@@ -16,5 +16,5 @@ target_include_directories(HyCAN
         ${LIBNL3_INCLUDE_DIR}
 )
 target_link_libraries(HyCAN
-        PUBLIC ${LIBNL3_LIBRARIES} tl::expected
+        PUBLIC ${LIBNL3_LIBRARIES} tl::expected HyCAN_UnixSocket
 )

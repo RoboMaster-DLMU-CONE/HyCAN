@@ -1,8 +1,7 @@
-#include "HyCAN/Interface/Netlink.hpp"
-#include "HyCAN/Daemon/Message.hpp"
-#include "HyCAN/Util/UnixSocket.hpp"
+#include <HyCAN/Interface/Netlink.hpp>
+#include <HyCAN/Daemon/Message.hpp>
+#include <HyCAN/Daemon/UnixSocket/UnixSocket.hpp>
 
-#include <stdexcept>
 #include <format>
 #include <cstring>
 #include <net/if.h>
@@ -33,7 +32,7 @@ namespace HyCAN
             try
             {
                 // Create socket for registration
-                auto registration_socket = std::make_unique<UnixSocket>("daemon", UnixSocket::CLIENT);
+                const auto registration_socket = std::make_unique<UnixSocket>("daemon", UnixSocket::CLIENT);
                 if (!registration_socket->initialize())
                 {
                     return unexpected(Error{
@@ -43,7 +42,7 @@ namespace HyCAN
                 }
 
                 // Send registration request
-                ClientRegisterRequest register_request(getpid());
+                const ClientRegisterRequest register_request(getpid());
                 if (registration_socket->send(&register_request, sizeof(register_request)) < 0)
                 {
                     return unexpected(Error{
@@ -54,7 +53,7 @@ namespace HyCAN
 
                 // Receive registration response
                 ClientRegisterResponse response;
-                ssize_t bytes_received = registration_socket->recv(&response, sizeof(response), 5000);
+                const ssize_t bytes_received = registration_socket->recv(&response, sizeof(response), 5000);
                 
                 if (bytes_received != sizeof(ClientRegisterResponse))
                 {
@@ -97,7 +96,7 @@ namespace HyCAN
             try
             {
                 // Create client socket connection
-                auto client_socket = std::make_unique<UnixSocket>(client_channel_name_, UnixSocket::CLIENT);
+                const auto client_socket = std::make_unique<UnixSocket>(client_channel_name_, UnixSocket::CLIENT);
                 if (!client_socket->initialize())
                 {
                     return unexpected(Error{
@@ -117,7 +116,7 @@ namespace HyCAN
 
                 // Receive response
                 NetlinkResponse response;
-                ssize_t bytes_received = client_socket->recv(&response, sizeof(response), 5000);
+                const ssize_t bytes_received = client_socket->recv(&response, sizeof(response), 5000);
                 
                 if (bytes_received != sizeof(NetlinkResponse))
                 {
@@ -180,7 +179,7 @@ namespace HyCAN
         {
             const bool is_can_interface = interface_name.starts_with("can");
             const bool needs_vcan_creation = interface_name.starts_with("vcan");
-            NetlinkRequest request{interface_name, up, is_can_interface && up, 1000000, needs_vcan_creation};
+            const NetlinkRequest request{interface_name, up, is_can_interface && up, 1000000, needs_vcan_creation};
 
             auto response_result = send_request(request);
             if (!response_result)
@@ -248,7 +247,7 @@ namespace HyCAN
 
         tl::expected<void, Error> create_vcan_interface(const std::string_view interface_name)
         {
-            NetlinkRequest request{RequestType::CREATE_VCAN_INTERFACE, interface_name};
+            const NetlinkRequest request{RequestType::CREATE_VCAN_INTERFACE, interface_name};
 
             auto response_result = send_request(request);
             if (!response_result)
@@ -308,7 +307,7 @@ namespace HyCAN
         }
     }
 
-    tl::expected<void, Error> NetlinkManager::set(std::string_view interface_name, bool up)
+    tl::expected<void, Error> NetlinkManager::set(const std::string_view interface_name, const bool up)
     {
         auto init_result = ensure_initialized();
         if (!init_result)

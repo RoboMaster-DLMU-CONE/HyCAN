@@ -9,7 +9,7 @@
 #include <mutex>
 #include <chrono>
 
-#include "HyCAN/Util/UnixSocket.hpp"
+#include "UnixSocket/UnixSocket.hpp"
 
 struct nl_sock;
 struct nl_cache;
@@ -63,7 +63,7 @@ namespace HyCAN
         
         // Client session methods
         std::string generate_client_channel_name(pid_t client_pid);
-        void handle_client_registration(const ClientRegisterRequest& request, std::unique_ptr<UnixSocket> registration_socket);
+        void handle_client_registration(const ClientRegisterRequest& request, const std::unique_ptr<UnixSocket>& registration_socket);
         void client_session_worker(ClientSession* session);
         bool is_process_alive(pid_t pid) const;
         

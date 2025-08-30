@@ -4,8 +4,6 @@
 #include <unistd.h>
 #include <format>
 #include <net/if.h>
-#include <sys/ioctl.h>
-#include <cstring>
 
 #include <netlink/cache.h>
 #include <netlink/errno.h>
@@ -17,7 +15,7 @@
 #include "HyCAN/Daemon/Message.hpp"
 #include "HyCAN/Daemon/Daemon.hpp"
 #include "HyCAN/Daemon/VCAN.hpp"
-#include "HyCAN/Util/UnixSocket.hpp"
+#include "../../include/HyCAN/Daemon/UnixSocket/UnixSocket.hpp"
 
 namespace HyCAN
 {
@@ -69,20 +67,15 @@ namespace HyCAN
 
                 // Receive registration request
                 ClientRegisterRequest register_request;
-                ssize_t bytes_received = client_socket->recv(&register_request, sizeof(register_request), 1000);
+                const ssize_t bytes_received = client_socket->recv(&register_request, sizeof(register_request), 1000);
                 
                 if (bytes_received == sizeof(ClientRegisterRequest))
                 {
                     handle_client_registration(register_request, std::move(client_socket));
                 }
-                else if (bytes_received == 0)
+                else if (bytes_received != 0)
                 {
-                    // Timeout, continue
-                    continue;
-                }
-                else
-                {
-                    std::cerr << "Received invalid request size: " << bytes_received 
+                    std::cerr << "Received invalid request size: " << bytes_received
                               << " (expected: " << sizeof(ClientRegisterRequest) << ")" << std::endl;
                 }
             }
@@ -113,14 +106,14 @@ namespace HyCAN
         return std::format("HyCAN_Client_{}", client_pid);
     }
 
-    void Daemon::handle_client_registration(const ClientRegisterRequest& request, std::unique_ptr<UnixSocket> registration_socket)
+    void Daemon::handle_client_registration(const ClientRegisterRequest& request, const std::unique_ptr<UnixSocket>& registration_socket)
     {
-        std::lock_guard<std::mutex> lock(sessions_mutex_);
+        std::lock_guard lock(sessions_mutex_);
         
         std::cout << "Registering client with PID: " << request.client_pid << std::endl;
         
         // Check if client already exists
-        if (client_sessions_.find(request.client_pid) != client_sessions_.end())
+        if (client_sessions_.contains(request.client_pid))
         {
             std::cout << "Client " << request.client_pid << " already registered, updating..." << std::endl;
             // Update last activity time
@@ -161,7 +154,7 @@ namespace HyCAN
         }
         
         // Send response with channel name
-        ClientRegisterResponse response(0, client_sessions_[request.client_pid]->channel_name);
+        const ClientRegisterResponse response(0, client_sessions_[request.client_pid]->channel_name);
         
         if (registration_socket->send(&response, sizeof(response)) < 0)
         {
@@ -178,7 +171,7 @@ namespace HyCAN
             try
             {
                 // Accept incoming connection from client with timeout
-                auto client_connection = session->socket->accept(1000); // 1 second timeout
+                const auto client_connection = session->socket->accept(1000); // 1 second timeout
                 if (!client_connection)
                 {
                     continue; // timeout, continue checking the running flags
@@ -186,7 +179,7 @@ namespace HyCAN
                 
                 // Receive request
                 NetlinkRequest request;
-                ssize_t bytes_received = client_connection->recv(&request, sizeof(request), 1000);
+                const ssize_t bytes_received = client_connection->recv(&request, sizeof(request), 1000);
                 
                 if (bytes_received == 0)
                 {
@@ -263,7 +256,7 @@ namespace HyCAN
 
     void Daemon::cleanup_sessions()
     {
-        std::lock_guard<std::mutex> lock(sessions_mutex_);
+        std::lock_guard lock(sessions_mutex_);
         
         for (auto& [pid, session] : client_sessions_)
         {
@@ -277,7 +270,7 @@ namespace HyCAN
         client_sessions_.clear();
     }
 
-    bool Daemon::is_process_alive(pid_t pid) const
+    bool Daemon::is_process_alive(const pid_t pid) const
     {
         return kill(pid, 0) == 0;
     }
@@ -333,7 +326,7 @@ namespace HyCAN
         }
 
         rtnl_link* link = rtnl_link_get_by_name(link_cache_, std::string(interface_name).c_str());
-        bool exists = (link != nullptr);
+        const bool exists = (link != nullptr);
         
         if (link)
         {
@@ -343,7 +336,7 @@ namespace HyCAN
         return NetlinkResponse(0, exists, false);
     }
 
-    NetlinkResponse Daemon::check_interface_is_up(std::string_view interface_name) const
+    NetlinkResponse Daemon::check_interface_is_up(const std::string_view interface_name) const
     {
         // Refresh cache to get latest state
         if (nl_cache_refill(nl_socket_, link_cache_) < 0)
@@ -352,7 +345,7 @@ namespace HyCAN
         }
 
         rtnl_link* link = rtnl_link_get_by_name(link_cache_, std::string(interface_name).c_str());
-        bool exists = (link != nullptr);
+        const bool exists = (link != nullptr);
         bool is_up = false;
         
         if (link)

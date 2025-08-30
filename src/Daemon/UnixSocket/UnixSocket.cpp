@@ -1,4 +1,4 @@
-#include "HyCAN/Util/UnixSocket.hpp"
+#include <HyCAN/Daemon/UnixSocket/UnixSocket.hpp>
 #include <iostream>
 #include <sys/select.h>
 #include <algorithm>
@@ -8,12 +8,12 @@
 
 namespace HyCAN
 {
-    UnixSocket::UnixSocket(const std::string& path, Mode mode)
+    UnixSocket::UnixSocket(const std::string& path, const Mode mode)
         : socket_path_("/run/hycan_" + path), mode_(mode)
     {
     }
 
-    UnixSocket::UnixSocket(int fd, const std::string& path)
+    UnixSocket::UnixSocket(const int fd, const std::string& path)
         : socket_fd_(fd), socket_path_(path), mode_(CLIENT), connected_(true)
     {
     }
@@ -125,7 +125,7 @@ namespace HyCAN
         return true;
     }
 
-    std::unique_ptr<UnixSocket> UnixSocket::accept(int timeout_ms)
+    std::unique_ptr<UnixSocket> UnixSocket::accept(const int timeout_ms)
     {
         if (mode_ != SERVER || !connected_)
         {
@@ -142,14 +142,14 @@ namespace HyCAN
             timeout.tv_sec = timeout_ms / 1000;
             timeout.tv_usec = (timeout_ms % 1000) * 1000;
 
-            int result = select(socket_fd_ + 1, &read_fds, nullptr, nullptr, &timeout);
+            const int result = select(socket_fd_ + 1, &read_fds, nullptr, nullptr, &timeout);
             if (result <= 0)
             {
                 return nullptr; // timeout or error
             }
         }
 
-        int client_fd = ::accept(socket_fd_, nullptr, nullptr);
+        const int client_fd = ::accept(socket_fd_, nullptr, nullptr);
         if (client_fd == -1)
         {
             return nullptr;
@@ -158,7 +158,7 @@ namespace HyCAN
         return std::unique_ptr<UnixSocket>(new UnixSocket(client_fd, socket_path_));
     }
 
-    ssize_t UnixSocket::send(const void* data, size_t size)
+    ssize_t UnixSocket::send(const void* data, const size_t size)
     {
         if (!connected_ || socket_fd_ == -1)
         {
@@ -168,7 +168,7 @@ namespace HyCAN
         return ::send(socket_fd_, data, size, MSG_NOSIGNAL);
     }
 
-    ssize_t UnixSocket::recv(void* buffer, size_t size, int timeout_ms)
+    ssize_t UnixSocket::recv(void* buffer, const size_t size, const int timeout_ms)
     {
         if (!connected_ || socket_fd_ == -1)
         {
@@ -185,7 +185,7 @@ namespace HyCAN
             timeout.tv_sec = timeout_ms / 1000;
             timeout.tv_usec = (timeout_ms % 1000) * 1000;
 
-            int result = select(socket_fd_ + 1, &read_fds, nullptr, nullptr, &timeout);
+            const int result = select(socket_fd_ + 1, &read_fds, nullptr, nullptr, &timeout);
             if (result <= 0)
             {
                 return result; // 0 for timeout, -1 for error
@@ -195,10 +195,10 @@ namespace HyCAN
         return ::recv(socket_fd_, buffer, size, 0);
     }
 
-    std::vector<uint8_t> UnixSocket::recv_vector(size_t max_size, int timeout_ms)
+    std::vector<uint8_t> UnixSocket::recv_vector(const size_t max_size, const int timeout_ms)
     {
         std::vector<uint8_t> buffer(max_size);
-        ssize_t bytes_received = recv(buffer.data(), max_size, timeout_ms);
+        const ssize_t bytes_received = recv(buffer.data(), max_size, timeout_ms);
         
         if (bytes_received <= 0)
         {
