@@ -18,7 +18,7 @@ namespace HyCAN
         VCAN
     };
 
-    template<InterfaceType Type = InterfaceType::CAN>
+    template <InterfaceType Type = InterfaceType::CAN>
     class Interface
     {
     public:
@@ -27,7 +27,7 @@ namespace HyCAN
         tl::expected<void, Error> up(uint32_t bitrate = 1000000);
         tl::expected<void, Error> down();
         tl::expected<bool, Error> exists();
-        tl::expected<bool, Error> state();
+        tl::expected<bool, Error> is_up();
 
         template <CanFrameConvertible T>
         tl::expected<void, Error> send(T frame)

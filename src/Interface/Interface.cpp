@@ -5,14 +5,14 @@ using std::string, tl::unexpected;
 
 namespace HyCAN
 {
-    template<InterfaceType Type>
-    Interface<Type>::Interface(const string& interface_name): interface_name(string(interface_name)),
-                                                              reaper(this->interface_name),
-                                                              sender(this->interface_name)
+    template <InterfaceType Type>
+    Interface<Type>::Interface(const string& interface_name) : interface_name(string(interface_name)),
+                                                               reaper(this->interface_name),
+                                                               sender(this->interface_name)
     {
     }
 
-    template<InterfaceType Type>
+    template <InterfaceType Type>
     tl::expected<void, Error> Interface<Type>::up(const uint32_t bitrate)
     {
         if constexpr (Type == InterfaceType::VCAN)
@@ -23,7 +23,7 @@ namespace HyCAN
             {
                 return unexpected(exists_result.error());
             }
-            
+
             if (!exists_result.value())
             {
                 // Create VCAN interface
@@ -42,7 +42,7 @@ namespace HyCAN
             {
                 return unexpected(exists_result.error());
             }
-            
+
             if (!exists_result.value())
             {
                 return unexpected(Error{
@@ -53,17 +53,17 @@ namespace HyCAN
         }
 
         return Netlink::instance().set(interface_name, true, bitrate)
-                      .and_then([&] { return reaper.start(); });
+                                  .and_then([&] { return reaper.start(); });
     }
 
-    template<InterfaceType Type>
+    template <InterfaceType Type>
     tl::expected<void, Error> Interface<Type>::down()
     {
         return Netlink::instance().set(interface_name, false)
-                      .and_then([&]
-                      {
-                          return reaper.stop();
-                      });
+                                  .and_then([&]
+                                   {
+                                       return reaper.stop();
+                                   });
     }
 
     template <InterfaceType Type>
@@ -73,7 +73,7 @@ namespace HyCAN
     }
 
     template <InterfaceType Type>
-    tl::expected<bool, Error> Interface<Type>::state()
+    tl::expected<bool, Error> Interface<Type>::is_up()
     {
         return Netlink::instance().is_up(interface_name);
     }
