@@ -17,7 +17,6 @@ namespace HyCAN
      */
     class NetlinkClient
     {
-    private:
         std::string client_channel_name_;
         bool registered_{false};
 

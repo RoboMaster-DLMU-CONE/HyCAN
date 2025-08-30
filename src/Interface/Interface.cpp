@@ -66,6 +66,18 @@ namespace HyCAN
                       });
     }
 
+    template <InterfaceType Type>
+    tl::expected<bool, Error> Interface<Type>::exists()
+    {
+        return Netlink::instance().exists(interface_name);
+    }
+
+    template <InterfaceType Type>
+    tl::expected<bool, Error> Interface<Type>::state()
+    {
+        return Netlink::instance().is_up(interface_name);
+    }
+
     // Explicit template instantiations
     template class Interface<InterfaceType::VCAN>;
     template class Interface<InterfaceType::CAN>;
