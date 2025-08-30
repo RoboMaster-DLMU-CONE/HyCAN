@@ -25,7 +25,9 @@ int main()
         signal(SIGTERM, signal_handler);
         signal(SIGINT, signal_handler);
 
-        return daemon.run();
+        const int exit_code = daemon.run();
+        g_daemon_instance = nullptr;
+        return exit_code;
     }
     catch (const std::exception& e)
     {

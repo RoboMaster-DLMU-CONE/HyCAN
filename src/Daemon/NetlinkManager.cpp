@@ -183,6 +183,14 @@ namespace HyCAN
         // 设置 CAN 比特率
         if (rtnl_link_is_can(link))
         {
+            // 在设置比特率之前，必须先为 change 对象设置链路类型
+            if (rtnl_link_set_type(change, "can") < 0)
+            {
+                rtnl_link_put(change);
+                rtnl_link_put(link);
+                return NetlinkResponse(-1, "Failed to set link type to 'can'");
+            }
+
             rtnl_link_can_set_bitrate(change, bitrate);
             const int result = rtnl_link_change(nl_socket_, link, change, 0);
 
