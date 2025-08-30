@@ -43,17 +43,17 @@ int main()
     std::cout << "INFO: This test requires CAP_NET_ADMIN or root privileges." << std::endl;
     std::cout << "INFO: Using test interface: " << test_interface_name << std::endl;
 
-    auto netlink = Netlink(test_interface_name);
+    auto& netlink = Netlink::instance();
 
     // --- Test 1: Set Virtual Interface UP ---
     std::cout << "\nTEST 1: Bringing UP virtual interface '" << test_interface_name << "'..." << std::endl;
-    (void)netlink.up().or_else([&](const auto& e)
+    (void)netlink.set(test_interface_name, true).or_else([&](const auto& e)
     {
         std::cerr << "FAIL: " << e.message << std::endl;
         test_result_code = EXIT_FAILURE;
     });
 
-    std::cout << "PASS: Netlink::up for '" << test_interface_name << "' succeeded." << std::endl;
+    std::cout << "PASS: Netlink::set(up) for '" << test_interface_name << "' succeeded." << std::endl;
 
     // existence & state check after up()
     if (!interface_exists(test_interface_name))
@@ -69,12 +69,12 @@ int main()
 
     // --- Test 2: Set Interface DOWN ---
     std::cout << "\nTEST 2: Bringing DOWN interface '" << test_interface_name << "'..." << std::endl;
-    (void)netlink.down().or_else([&](const auto& e)
+    (void)netlink.set(test_interface_name, false).or_else([&](const auto& e)
     {
         std::cerr << "FAIL: " << e.message << std::endl;
         test_result_code = EXIT_FAILURE;
     });
-    std::cout << "PASS: Netlink::down for '" << test_interface_name << "' succeeded." << std::endl;
+    std::cout << "PASS: Netlink::set(down) for '" << test_interface_name << "' succeeded." << std::endl;
 
     // existence & state check after down()
     if (!interface_exists(test_interface_name))

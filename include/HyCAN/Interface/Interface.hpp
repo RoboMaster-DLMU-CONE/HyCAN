@@ -11,6 +11,13 @@
 
 namespace HyCAN
 {
+    enum class InterfaceType
+    {
+        CAN,
+        VCAN
+    };
+
+    template<InterfaceType Type = InterfaceType::VCAN>
     class Interface
     {
     public:
@@ -40,10 +47,13 @@ namespace HyCAN
 
     private:
         std::string interface_name;
-        Netlink netlink;
         Reaper reaper;
         Sender sender;
     };
+
+    // Type aliases for common usage
+    using VCANInterface = Interface<InterfaceType::VCAN>;
+    using CANInterface = Interface<InterfaceType::CAN>;
 }
 
 #endif //INTERFACE_HPP

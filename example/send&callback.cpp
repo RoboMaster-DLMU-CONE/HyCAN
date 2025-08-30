@@ -5,7 +5,7 @@
 
 #include "HyCAN/Interface/Interface.hpp"
 
-using HyCAN::Interface;
+using HyCAN::VCANInterface;
 
 int main()
 {
@@ -27,7 +27,7 @@ int main()
         .data = {0, 1, 2, 3, 4, 5, 6, 7},
     };
 
-    Interface interface("vcan0");
+    VCANInterface interface("vcan0");
     std::this_thread::sleep_for(std::chrono::seconds(2));
     (void)interface.tryRegisterCallback({0x100}, callback)
                    .and_then([&] { return interface.up(); })
