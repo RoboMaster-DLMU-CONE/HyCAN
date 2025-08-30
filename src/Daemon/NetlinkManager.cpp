@@ -64,7 +64,7 @@ namespace HyCAN
         }
     }
 
-    NetlinkResponse NetlinkManager::check_interface_exists(std::string_view interface_name) const
+    NetlinkResponse NetlinkManager::check_interface_exists(const std::string_view interface_name) const
     {
         // Refresh cache to get latest state
         if (nl_cache_refill(nl_socket_, link_cache_) < 0)

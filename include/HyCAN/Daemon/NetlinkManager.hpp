@@ -2,7 +2,6 @@
 #define HYCAN_DAEMON_NETLINK_MANAGER_HPP
 
 #include <string_view>
-#include <cstdint>
 
 struct nl_sock;
 struct nl_cache;
@@ -20,7 +19,6 @@ namespace HyCAN
      */
     class NetlinkManager
     {
-    private:
         nl_sock* nl_socket_{nullptr};
         nl_cache* link_cache_{nullptr};
 

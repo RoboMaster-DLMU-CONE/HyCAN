@@ -2,7 +2,6 @@
 #define HYCAN_DAEMON_CLASS_HPP
 
 #include <atomic>
-#include <string_view>
 #include <memory>
 #include <unordered_map>
 #include <thread>
@@ -31,7 +30,7 @@ namespace HyCAN
         std::chrono::steady_clock::time_point last_activity;
         std::atomic<bool> running{true};
 
-        ClientSession(pid_t pid, std::string name) 
+        ClientSession(const pid_t pid, std::string name)
             : client_pid(pid), channel_name(std::move(name)), 
               last_activity(std::chrono::steady_clock::now()) {}
     };
