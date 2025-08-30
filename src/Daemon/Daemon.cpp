@@ -13,8 +13,8 @@
 #include <netlink/route/link/can.h>
 
 #include "libipc/ipc.h"
+#include "HyCAN/Daemon/Message.hpp"
 #include "HyCAN/Daemon/Daemon.hpp"
-#include "HyCAN/Daemon/DaemonClass.hpp"
 #include "HyCAN/Daemon/VCAN.hpp"
 
 namespace HyCAN
@@ -47,7 +47,7 @@ namespace HyCAN
         {
             try
             {
-                // 等待客户端请求，超时 1 秒以便检查停止标志
+                // 等待客户端请求，超时 1 秒检查停止标志
                 auto received = channel_.recv(1000); // 1000ms 超时
 
                 if (received.empty())
@@ -261,38 +261,5 @@ namespace HyCAN
 
         // 设置接口状态
         return set_interface_state_libnl(request.interface_name, request.up);
-    }
-
-    // 静态实例用于信号处理
-    static Daemon* g_daemon_instance = nullptr;
-
-    void signal_handler(int sig)
-    {
-        if (g_daemon_instance && (sig == SIGTERM || sig == SIGINT))
-        {
-            std::cout << "Received signal " << sig << ", stopping daemon..." << std::endl;
-            g_daemon_instance->stop();
-        }
-    }
-} // namespace HyCAN
-
-// 主函数实现
-int main()
-{
-    try
-    {
-        HyCAN::Daemon daemon;
-        HyCAN::g_daemon_instance = &daemon;
-
-        // 设置信号处理
-        signal(SIGTERM, HyCAN::signal_handler);
-        signal(SIGINT, HyCAN::signal_handler);
-
-        return daemon.run();
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr << "Fatal error: " << e.what() << std::endl;
-        return 1;
     }
 }

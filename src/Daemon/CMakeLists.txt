@@ -1,6 +1,7 @@
 add_executable(HyCAN_Daemon
         Daemon.cpp
         VCAN.cpp
+        main.cpp
 )
 
 target_include_directories(HyCAN_Daemon PRIVATE ${PROJECT_SOURCE_DIR}/include ${LIBNL3_INCLUDE_DIR})
