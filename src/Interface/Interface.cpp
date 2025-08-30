@@ -13,7 +13,7 @@ namespace HyCAN
     }
 
     template<InterfaceType Type>
-    tl::expected<void, Error> Interface<Type>::up()
+    tl::expected<void, Error> Interface<Type>::up(const uint32_t bitrate)
     {
         if constexpr (Type == InterfaceType::VCAN)
         {
@@ -52,7 +52,7 @@ namespace HyCAN
             }
         }
 
-        return Netlink::instance().set(interface_name, true)
+        return Netlink::instance().set(interface_name, true, bitrate)
                       .and_then([&] { return reaper.start(); });
     }
 

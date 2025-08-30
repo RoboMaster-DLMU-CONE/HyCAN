@@ -3,6 +3,7 @@
 
 #include <string>
 #include <set>
+#include <cstdint>
 #include "CanFrameConvertible.hpp"
 #include "Netlink.hpp"
 #include "Reaper.hpp"
@@ -23,7 +24,7 @@ namespace HyCAN
     public:
         explicit Interface(const std::string& interface_name);
         Interface() = delete;
-        tl::expected<void, Error> up();
+        tl::expected<void, Error> up(uint32_t bitrate = 1000000);
         tl::expected<void, Error> down();
         tl::expected<bool, Error> exists();
         tl::expected<bool, Error> state();

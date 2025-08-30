@@ -3,6 +3,7 @@
 
 #include <string>
 #include <memory>
+#include <cstdint>
 
 #include <tl/expected.hpp>
 
@@ -30,7 +31,7 @@ namespace HyCAN
         static Netlink& instance();
         
         // Core interface operations
-        tl::expected<void, Error> set(std::string_view interface_name, bool up);
+        tl::expected<void, Error> set(std::string_view interface_name, bool up, uint32_t bitrate = 1000000);
         tl::expected<bool, Error> exists(std::string_view interface_name);
         tl::expected<bool, Error> is_up(std::string_view interface_name);
         tl::expected<void, Error> create_vcan(std::string_view interface_name);
