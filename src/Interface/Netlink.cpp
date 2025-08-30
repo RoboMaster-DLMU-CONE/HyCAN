@@ -26,6 +26,14 @@ namespace HyCAN
         std::unique_ptr<ipc::channel> client_channel_;
         bool registered_{false};
 
+    public:
+        ~NetlinkClient()
+        {
+            // Explicit cleanup to ensure proper order
+            client_channel_.reset();
+            main_channel_.reset();
+        }
+
         tl::expected<void, Error> ensure_registered()
         {
             if (registered_)
@@ -36,7 +44,7 @@ namespace HyCAN
             try
             {
                 // Create main channel for registration
-                main_channel_ = std::make_unique<ipc::channel>("HyCAN_Daemon", ipc::sender);
+                main_channel_ = std::make_unique<ipc::channel>("HyCAN_Daemon", ipc::sender | ipc::receiver);
 
                 // Send registration request
                 ClientRegisterRequest register_request(getpid());
@@ -74,7 +82,7 @@ namespace HyCAN
 
                 // Set up client channel
                 client_channel_name_ = response->client_channel_name;
-                client_channel_ = std::make_unique<ipc::channel>(client_channel_name_.c_str(), ipc::sender);
+                client_channel_ = std::make_unique<ipc::channel>(client_channel_name_.c_str(), ipc::sender | ipc::receiver);
 
                 registered_ = true;
                 return {};
@@ -270,7 +278,11 @@ namespace HyCAN
     {
     }
 
-    NetlinkManager::~NetlinkManager() = default;
+    NetlinkManager::~NetlinkManager() 
+    {
+        // Explicitly reset the client before destruction
+        client_.reset();
+    }
 
     NetlinkManager& NetlinkManager::instance()
     {
