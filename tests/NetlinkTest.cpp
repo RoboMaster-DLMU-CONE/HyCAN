@@ -40,20 +40,32 @@ int main()
     int test_result_code = EXIT_SUCCESS;
 
     std::cout << "--- HyCAN Netlink Management Test ---" << std::endl;
-    std::cout << "INFO: This test requires CAP_NET_ADMIN or root privileges." << std::endl;
     std::cout << "INFO: Using test interface: " << test_interface_name << std::endl;
 
+    // --- Test 1: Create Virtual Interface---
+    std::cout << "\nTEST 1: Creating Virtual Interface '" << test_interface_name << "'..." << std::endl;
     auto& netlink = Netlink::instance();
-
-    // --- Test 1: Set Virtual Interface UP ---
-    std::cout << "\nTEST 1: Bringing UP virtual interface '" << test_interface_name << "'..." << std::endl;
-    (void)netlink.set(test_interface_name, true).or_else([&](const auto& e)
+    if (const auto result = netlink.create_vcan(test_interface_name); result)
     {
-        std::cerr << "FAIL: " << e.message << std::endl;
+        std::cout << "PASS: Netlink::create_vcan for '" << test_interface_name << "' succeeded." << std::endl;
+    }
+    else
+    {
+        std::cerr << "FAIL: " << result.error().message << std::endl;
         test_result_code = EXIT_FAILURE;
-    });
+    }
 
-    std::cout << "PASS: Netlink::set(up) for '" << test_interface_name << "' succeeded." << std::endl;
+    // --- Test 2: Set Virtual Interface UP ---
+    std::cout << "\nTEST 2: Bringing UP virtual interface '" << test_interface_name << "'..." << std::endl;
+    if (const auto result = netlink.set(test_interface_name, true); result)
+    {
+        std::cout << "PASS: Netlink::set(up) for '" << test_interface_name << "' succeeded." << std::endl;
+    }
+    else
+    {
+        std::cerr << "FAIL: " << result.error().message << std::endl;
+        test_result_code = EXIT_FAILURE;
+    }
 
     // existence & state check after up()
     if (!interface_exists(test_interface_name))
@@ -67,8 +79,8 @@ int main()
         test_result_code = EXIT_FAILURE;
     }
 
-    // --- Test 2: Set Interface DOWN ---
-    std::cout << "\nTEST 2: Bringing DOWN interface '" << test_interface_name << "'..." << std::endl;
+    // --- Test 3: Set Interface DOWN ---
+    std::cout << "\nTEST 3: Bringing DOWN interface '" << test_interface_name << "'..." << std::endl;
     (void)netlink.set(test_interface_name, false).or_else([&](const auto& e)
     {
         std::cerr << "FAIL: " << e.message << std::endl;

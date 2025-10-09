@@ -67,7 +67,6 @@ int main()
     std::cout << "INFO: This test will use virtual CAN interface '" << TEST_INTERFACE_NAME
         << "'." << std::endl;
     std::cout << "INFO: Ensure 'vcan' module is loaded (sudo modprobe vcan)." << std::endl;
-    std::cout << "INFO: This test may require CAP_NET_ADMIN or root privileges to manage the interface." << std::endl;
 
     HyCAN::VCANInterface interface(TEST_INTERFACE_NAME);
 
