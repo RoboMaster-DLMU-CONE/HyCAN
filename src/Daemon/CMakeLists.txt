@@ -16,12 +16,12 @@ install(TARGETS HyCAN_Daemon
 )
 
 configure_file(
-        systemed/hycan-daemon.service.in
-        ${CMAKE_CURRENT_BINARY_DIR}/systemed/hycan-daemon.service
+        systemd/hycan-daemon.service.in
+        ${CMAKE_CURRENT_BINARY_DIR}/systemd/hycan-daemon.service
         @ONLY
 )
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/systemed/hycan-daemon.service
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/systemd/hycan-daemon.service
         DESTINATION lib/systemd/system
 )
 
