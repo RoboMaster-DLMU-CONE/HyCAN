@@ -78,7 +78,7 @@ int main()
     g_callback_triggered.store(false, std::memory_order_relaxed);
     g_received_frame.reset();
 
-    (void)interface.tryRegisterCallback<can_frame>({TEST_CAN_ID}, test_can_callback).or_else([&](const auto& e)
+    (void)interface.register_callback<can_frame>({TEST_CAN_ID}, test_can_callback).or_else([&](const auto& e)
     {
         std::cerr << "FAIL: " << e.message;
         result_code = EXIT_FAILURE;

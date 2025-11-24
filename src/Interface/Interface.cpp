@@ -1,5 +1,5 @@
 #include "HyCAN/Interface/Interface.hpp"
-#include "HyCAN/Interface/Netlink.hpp"
+#include "HyCAN/Interface/IPCManager.hpp"
 #include <format>
 using std::string, tl::unexpected;
 
@@ -18,7 +18,7 @@ namespace HyCAN
         if constexpr (Type == InterfaceType::VCAN)
         {
             // For VCAN, create the interface if it doesn't exist
-            auto exists_result = Netlink::instance().exists(interface_name);
+            auto exists_result = IPCManager::instance().exists(interface_name);
             if (!exists_result)
             {
                 return unexpected(exists_result.error());
@@ -27,7 +27,7 @@ namespace HyCAN
             if (!exists_result.value())
             {
                 // Create VCAN interface
-                auto create_result = Netlink::instance().create_vcan(interface_name);
+                auto create_result = IPCManager::instance().create_vcan(interface_name);
                 if (!create_result)
                 {
                     return unexpected(create_result.error());
@@ -37,7 +37,7 @@ namespace HyCAN
         else if constexpr (Type == InterfaceType::CAN)
         {
             // For CAN, ensure the interface exists (error if not found)
-            auto exists_result = Netlink::instance().exists(interface_name);
+            auto exists_result = IPCManager::instance().exists(interface_name);
             if (!exists_result)
             {
                 return unexpected(exists_result.error());
@@ -52,14 +52,14 @@ namespace HyCAN
             }
         }
 
-        return Netlink::instance().set(interface_name, true, bitrate)
+        return IPCManager::instance().set(interface_name, true, bitrate)
                                   .and_then([&] { return reaper.start(); });
     }
 
     template <InterfaceType Type>
     tl::expected<void, Error> Interface<Type>::down()
     {
-        return Netlink::instance().set(interface_name, false)
+        return IPCManager::instance().set(interface_name, false)
                                   .and_then([&]
                                    {
                                        return reaper.stop();
@@ -69,13 +69,13 @@ namespace HyCAN
     template <InterfaceType Type>
     tl::expected<bool, Error> Interface<Type>::exists()
     {
-        return Netlink::instance().exists(interface_name);
+        return IPCManager::instance().exists(interface_name);
     }
 
     template <InterfaceType Type>
     tl::expected<bool, Error> Interface<Type>::is_up()
     {
-        return Netlink::instance().is_up(interface_name);
+        return IPCManager::instance().is_up(interface_name);
     }
 
     // Explicit template instantiations

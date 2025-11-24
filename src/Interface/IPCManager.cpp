@@ -1,4 +1,4 @@
-#include <HyCAN/Interface/Netlink.hpp>
+#include <HyCAN/Interface/IPCManager.hpp>
 #include <HyCAN/Interface/NetlinkClient.hpp>
 
 #include <format>
@@ -9,23 +9,23 @@ using tl::unexpected;
 namespace HyCAN
 {
     // Netlink singleton implementation
-    Netlink::Netlink() : main_channel_name_("HyCAN_Daemon")
+    IPCManager::IPCManager() : main_channel_name_("HyCAN_Daemon")
     {
     }
 
-    Netlink::~Netlink() 
+    IPCManager::~IPCManager() 
     {
         // Explicitly reset the client before destruction
         client_.reset();
     }
 
-    Netlink& Netlink::instance()
+    IPCManager& IPCManager::instance()
     {
-        static Netlink instance;
+        static IPCManager instance;
         return instance;
     }
 
-    tl::expected<void, Error> Netlink::ensure_initialized()
+    tl::expected<void, Error> IPCManager::ensure_initialized()
     {
         if (initialized_)
         {
@@ -47,7 +47,7 @@ namespace HyCAN
         }
     }
 
-    tl::expected<void, Error> Netlink::set(const std::string_view interface_name, const bool up, const uint32_t bitrate)
+    tl::expected<void, Error> IPCManager::set(const std::string_view interface_name, const bool up, const uint32_t bitrate)
     {
         auto init_result = ensure_initialized();
         if (!init_result)
@@ -58,7 +58,7 @@ namespace HyCAN
         return client_->set_interface_state(interface_name, up, bitrate);
     }
 
-    tl::expected<bool, Error> Netlink::exists(std::string_view interface_name)
+    tl::expected<bool, Error> IPCManager::exists(std::string_view interface_name)
     {
         auto init_result = ensure_initialized();
         if (!init_result)
@@ -69,7 +69,7 @@ namespace HyCAN
         return client_->interface_exists(interface_name);
     }
 
-    tl::expected<bool, Error> Netlink::is_up(std::string_view interface_name)
+    tl::expected<bool, Error> IPCManager::is_up(std::string_view interface_name)
     {
         auto init_result = ensure_initialized();
         if (!init_result)
@@ -80,7 +80,7 @@ namespace HyCAN
         return client_->interface_is_up(interface_name);
     }
 
-    tl::expected<void, Error> Netlink::create_vcan(std::string_view interface_name)
+    tl::expected<void, Error> IPCManager::create_vcan(std::string_view interface_name)
     {
         auto init_result = ensure_initialized();
         if (!init_result)

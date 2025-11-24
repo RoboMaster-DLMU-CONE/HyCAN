@@ -19,16 +19,16 @@ static constexpr size_t MAX_EPOLL_EVENT = 2048;
 
 namespace HyCAN
 {
-    class Reaper
+    class Dispatcher
     {
     public:
-        explicit Reaper(std::string_view interface_name);
-        Reaper() = delete;
-        Reaper(const Reaper& other) = delete;
-        Reaper(Reaper&& other) = delete;
-        ~Reaper();
-        Reaper& operator=(const Reaper& other) = delete;
-        Reaper& operator=(Reaper&& other) noexcept = delete;
+        explicit Dispatcher(std::string_view interface_name);
+        Dispatcher() = delete;
+        Dispatcher(const Dispatcher& other) = delete;
+        Dispatcher(Dispatcher&& other) = delete;
+        ~Dispatcher();
+        Dispatcher& operator=(const Dispatcher& other) = delete;
+        Dispatcher& operator=(Dispatcher&& other) noexcept = delete;
 
         tl::expected<void, Error> start() noexcept;
         tl::expected<void, Error> stop() noexcept;

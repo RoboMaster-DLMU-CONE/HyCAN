@@ -1,4 +1,4 @@
-#include "HyCAN/Interface/Reaper.hpp"
+#include "HyCAN/Interface/Dispatcher.hpp"
 
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
@@ -57,7 +57,8 @@ inline bool has_root_privileges() noexcept
 
 namespace HyCAN
 {
-    Reaper::Reaper(const std::string_view interface_name) : socket(interface_name), interface_name(interface_name)
+    Dispatcher::Dispatcher(const std::string_view interface_name) : socket(interface_name),
+                                                                    interface_name(interface_name)
     {
         epoll_fd = epoll_create(256);
         if (epoll_fd == -1)
@@ -77,7 +78,7 @@ namespace HyCAN
         cpu_core = thread_counter.fetch_add(1, std::memory_order_acquire) % get_nprocs();
     }
 
-    Reaper::~Reaper()
+    Dispatcher::~Dispatcher()
     {
         [[maybe_unused]] const auto _ = stop();
         if (epoll_fd != -1)
@@ -90,7 +91,7 @@ namespace HyCAN
         }
     }
 
-    tl::expected<void, Error> Reaper::start() noexcept
+    tl::expected<void, Error> Dispatcher::start() noexcept
     {
         return socket.ensure_connected()
                      .and_then([&] { return epoll_fd_add_sock_fd(socket.sock_fd); })
@@ -99,13 +100,13 @@ namespace HyCAN
                       {
                           if (!reap_thread.joinable())
                           {
-                              reap_thread = jthread(&Reaper::reap_process, this);
+                              reap_thread = jthread(&Dispatcher::reap_process, this);
                           }
                           return tl::expected<void, Error>{};
                       });
     }
 
-    tl::expected<void, Error> Reaper::stop() noexcept
+    tl::expected<void, Error> Dispatcher::stop() noexcept
     {
         if (reap_thread.joinable())
         {
@@ -122,7 +123,7 @@ namespace HyCAN
         return {};
     }
 
-    void Reaper::reap_process(const std::stop_token& stop_token)
+    void Dispatcher::reap_process(const std::stop_token& stop_token)
     {
         (void)make_real_time();
         (void)affinize_cpu(cpu_core);
@@ -191,7 +192,7 @@ namespace HyCAN
         }
     }
 
-    tl::expected<void, Error> Reaper::epoll_fd_add_sock_fd(const int sock_fd) const noexcept
+    tl::expected<void, Error> Dispatcher::epoll_fd_add_sock_fd(const int sock_fd) const noexcept
     {
         epoll_event ev{};
         ev = {
@@ -209,7 +210,7 @@ namespace HyCAN
         return {};
     }
 #ifdef HYCAN_LATENCY_TEST
-    Reaper::LatencyStats Reaper::get_latency_stats() const
+    Dispatcher::LatencyStats Dispatcher::get_latency_stats() const
     {
         LatencyStats stats;
         stats.total_latency_ns = accumulated_latency_ns.load(std::memory_order_relaxed);

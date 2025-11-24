@@ -7,8 +7,8 @@
 #include <sys/ioctl.h>
 
 #include "HyCAN/Interface/Interface.hpp"
-#include "HyCAN/Interface/Netlink.hpp"
-using HyCAN::Netlink;
+#include "HyCAN/Interface/IPCManager.hpp"
+using HyCAN::IPCManager;
 
 // helper: returns true if interface name resolves
 static bool interface_exists(const std::string_view& name)
@@ -44,7 +44,7 @@ int main()
 
     // --- Test 1: Create Virtual Interface---
     std::cout << "\nTEST 1: Creating Virtual Interface '" << test_interface_name << "'..." << std::endl;
-    auto& netlink = Netlink::instance();
+    auto& netlink = IPCManager::instance();
     if (const auto result = netlink.create_vcan(test_interface_name); result)
     {
         std::cout << "PASS: Netlink::create_vcan for '" << test_interface_name << "' succeeded." << std::endl;

@@ -5,8 +5,8 @@
 #include <set>
 #include <cstdint>
 #include "CanFrameConvertible.hpp"
-#include "Netlink.hpp"
-#include "Reaper.hpp"
+#include "IPCManager.hpp"
+#include "Dispatcher.hpp"
 #include "Sender.hpp"
 
 
@@ -36,13 +36,13 @@ namespace HyCAN
         };
 
         template <CanFrameConvertible T = can_frame>
-        tl::expected<void, Error> tryRegisterCallback(const std::set<size_t>& can_ids,
-                                                      const std::function<void(T&&)>& func)
+        tl::expected<void, Error> register_callback(const std::set<size_t>& can_ids,
+                                                    const std::function<void(T&&)>& func)
         {
             return reaper.tryRegisterFunc<T>(can_ids, func);
         }
 #ifdef HYCAN_LATENCY_TEST
-        Reaper::LatencyStats get_reaper_latency_stats() const
+        Dispatcher::LatencyStats get_reaper_latency_stats() const
         {
             return reaper.get_latency_stats();
         }
@@ -50,7 +50,7 @@ namespace HyCAN
 
     private:
         std::string interface_name;
-        Reaper reaper;
+        Dispatcher reaper;
         Sender sender;
     };
 

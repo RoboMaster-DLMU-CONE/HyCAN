@@ -151,7 +151,7 @@ int main()
                 stress_test_callback(std::move(frame), i, target_can_id);
             };
 
-            (void)interface_ptr->tryRegisterCallback<can_frame>(
+            (void)interface_ptr->register_callback<can_frame>(
                 {target_can_id}, callback_for_interface).or_else([&](const auto& e)
             {
                 std::cerr << e.message << std::endl;
@@ -272,7 +272,7 @@ int main()
             // 确保接口对象有效
             std::string if_name = VCAN_BASENAME + std::to_string(i);
 
-            if (const HyCAN::Reaper::LatencyStats stats = hycan_interfaces[i]->get_reaper_latency_stats(); stats.
+            if (const HyCAN::Dispatcher::LatencyStats stats = hycan_interfaces[i]->get_reaper_latency_stats(); stats.
                 message_count > 0)
             {
                 std::cout << "Interface " << if_name << ": Avg Latency "
