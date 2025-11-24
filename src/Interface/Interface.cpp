@@ -7,7 +7,7 @@ namespace HyCAN
 {
     template <InterfaceType Type>
     Interface<Type>::Interface(const string& interface_name) : interface_name(string(interface_name)),
-                                                               reaper(this->interface_name),
+                                                               dispatcher(this->interface_name),
                                                                sender(this->interface_name)
     {
     }
@@ -53,17 +53,17 @@ namespace HyCAN
         }
 
         return IPCManager::instance().set(interface_name, true, bitrate)
-                                  .and_then([&] { return reaper.start(); });
+                                     .and_then([&] { return dispatcher.start(); });
     }
 
     template <InterfaceType Type>
     tl::expected<void, Error> Interface<Type>::down()
     {
         return IPCManager::instance().set(interface_name, false)
-                                  .and_then([&]
-                                   {
-                                       return reaper.stop();
-                                   });
+                                     .and_then([&]
+                                      {
+                                          return dispatcher.stop();
+                                      });
     }
 
     template <InterfaceType Type>

@@ -17,7 +17,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y pkg-config libnl-3-dev libnl-route-3-dev linux-modules-extra-$(uname -r)
+          sudo apt install -y pkg-config libexpected-dev libnl-3-dev libnl-route-3-dev linux-modules-extra-$(uname -r)
 
       - name: Load CAN Module
         run: |

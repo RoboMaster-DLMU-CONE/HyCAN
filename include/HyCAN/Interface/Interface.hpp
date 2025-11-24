@@ -5,7 +5,6 @@
 #include <set>
 #include <cstdint>
 #include "CanFrameConvertible.hpp"
-#include "IPCManager.hpp"
 #include "Dispatcher.hpp"
 #include "Sender.hpp"
 
@@ -39,18 +38,18 @@ namespace HyCAN
         tl::expected<void, Error> register_callback(const std::set<size_t>& can_ids,
                                                     const std::function<void(T&&)>& func)
         {
-            return reaper.tryRegisterFunc<T>(can_ids, func);
+            return dispatcher.register_func<T>(can_ids, func);
         }
 #ifdef HYCAN_LATENCY_TEST
         Dispatcher::LatencyStats get_reaper_latency_stats() const
         {
-            return reaper.get_latency_stats();
+            return dispatcher.get_latency_stats();
         }
 #endif
 
     private:
         std::string interface_name;
-        Dispatcher reaper;
+        Dispatcher dispatcher;
         Sender sender;
     };
 

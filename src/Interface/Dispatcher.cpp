@@ -94,7 +94,7 @@ namespace HyCAN
     tl::expected<void, Error> Dispatcher::start() noexcept
     {
         return socket.ensure_connected()
-                     .and_then([&] { return epoll_fd_add_sock_fd(socket.sock_fd); })
+                     .and_then([&] { return epoll_fd_add_sock_fd(socket.get_sock_fd()); })
                      .and_then([&] { return socket.flush(); })
                      .and_then([&]
                       {

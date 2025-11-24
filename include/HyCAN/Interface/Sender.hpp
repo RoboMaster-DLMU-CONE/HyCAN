@@ -25,12 +25,12 @@ namespace HyCAN
                 ssize_t result;
                 if constexpr (std::is_same<T, can_frame>())
                 {
-                    result = write(socket.sock_fd, &frame, sizeof(frame));
+                    result = write(socket.get_sock_fd(), &frame, sizeof(frame));
                 }
                 else
                 {
                     const auto cf = static_cast<can_frame>(frame);
-                    result = write(socket.sock_fd, &cf, sizeof(cf));
+                    result = write(socket.get_sock_fd(), &cf, sizeof(cf));
                 }
                 if (result == -1)
                 {

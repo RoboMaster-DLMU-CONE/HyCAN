@@ -17,9 +17,19 @@ namespace HyCAN
         tl::expected<void, Error> ensure_connected() noexcept;
         tl::expected<void, Error> validate_connection() noexcept;
         [[nodiscard]] tl::expected<void, Error> flush() const noexcept;
-        int sock_fd{};
+
+        [[nodiscard]] int get_sock_fd() const
+        {
+            return sock_fd;
+        }
+
+        [[nodiscard]] std::string_view get_interface_name() const
+        {
+            return interface_name;
+        }
 
     private:
+        int sock_fd{};
         std::string_view interface_name;
     };
 }

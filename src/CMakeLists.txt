@@ -1,6 +1,9 @@
 add_subdirectory(Daemon)
 
 file(GLOB_RECURSE HYCAN_SOURCES Interface/*.cpp Util/*.cpp)
+
+set(MAX_STD_CAN_ID 2048)
+
 add_library(HyCAN)
 target_sources(HyCAN PRIVATE ${HYCAN_SOURCES})
 
@@ -17,4 +20,11 @@ target_include_directories(HyCAN
 )
 target_link_libraries(HyCAN
         PUBLIC ${LIBNL3_LIBRARIES} tl::expected HyCAN_UnixSocket
+)
+
+target_compile_definitions(HyCAN PUBLIC
+        HC_MAX_STD_CAN_ID=${MAX_STD_CAN_ID}
+        HYCAN_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+        HYCAN_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+        HYCAN_VERSION_PATCH=${PROJECT_VERSION_PATCH}
 )

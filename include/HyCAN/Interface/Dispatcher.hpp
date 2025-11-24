@@ -34,7 +34,7 @@ namespace HyCAN
         tl::expected<void, Error> stop() noexcept;
 
         template <CanFrameConvertible T = can_frame>
-        tl::expected<void, Error> tryRegisterFunc(const std::set<size_t>& can_ids, std::function<void(T&&)> func)
+        tl::expected<void, Error> register_func(const std::set<size_t>& can_ids, std::function<void(T&&)> func)
         {
             if (!func)
             {
@@ -87,7 +87,7 @@ namespace HyCAN
         int thread_event_fd{-1};
         int epoll_fd{-1};
         uint8_t cpu_core{};
-        std::function<void(can_frame&&)> funcs[2048]{};
+        std::function<void(can_frame&&)> funcs[HC_MAX_STD_CAN_ID]{};
         std::string_view interface_name;
         std::jthread reap_thread;
         Util::SpinLock lock_;
