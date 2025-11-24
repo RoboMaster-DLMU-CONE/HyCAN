@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+if command -v systemctl >/dev/null 2>&1; then
+    case "$1" in
+        remove|purge|upgrade)
+            systemctl stop hycan-daemon.service || true
+            systemctl disable hycan-daemon.service || true
+            ;;
+    esac
+    systemctl daemon-reload || true
+fi
+
+exit 0
