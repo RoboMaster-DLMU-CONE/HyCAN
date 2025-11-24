@@ -37,13 +37,17 @@
     sudo modprobe can
     ```
 
-### 从源代码构建
+### 使用包管理器安装
+
+前往[release](https://github.com/RoboMaster-DLMU-CONE/HyCAN/releases)下载
+
+### （可选）从源代码构建
 
 #### 安装依赖
 
 ```shell
 # Debian系
-sudo apt install pkg-config cmake libnl-3-dev libnl-nf-3-dev
+sudo apt install pkg-config cmake libnl-3-dev libnl-route-3-dev libexpected-dev
 ```
 
 #### CMake构建与安装
@@ -63,26 +67,26 @@ HyCAN支持接入CMake工程。请参考下面的`CMakeLists.txt`示例代码：
 cmake_minimum_required(VERSION 3.20)
 project(MyConsumerApp)
 
-include(FetchContent)
-
-# 尝试查找已安装的 HyCAN
-find_package(HyCAN QUIET)
-
-if (NOT HyCAN_FOUND)
-    message(STATUS "本地未找到 HyCAN 包，尝试从 GitHub 获取...")
-    FetchContent_Declare(
-            HyCAN_fetched
-            GIT_REPOSITORY "https://github.com/RoboMaster-DLMU-CONE/HyCAN"
-            GIT_TAG "main"
-    )
-    FetchContent_MakeAvailable(HyCAN_fetched)
-else ()
-    message(STATUS "已找到 HyCAN 版本 ${HyCAN_VERSION}")
-endif ()
-
+find_package(HyCAN REQUIRED)
 add_executable(MyConsumerApp main.cpp)
-
 target_link_libraries(MyConsumerApp PRIVATE HyCAN::HyCAN)
+```
+
+```c++
+#include <HyCAN/Interface/Interface.hpp>
+using HyCAN::CANInterface;
+int main() {
+    constexpr can_frame test_frame = {
+        .can_id = 0x100,
+        .len = 8,
+        .data = {0, 1, 2, 3, 4, 5, 6, 7},
+    };
+    CANInterface can_interface("can0");
+    
+    can_interface.send(test_frame);
+    
+    return 0;
+}
 ```
 
 #### 运行你的应用
@@ -100,6 +104,10 @@ target_link_libraries(MyConsumerApp PRIVATE HyCAN::HyCAN)
 # 如果守护进程未运行，启动它
 sudo systemctl start hycan-daemon
 ```
+
+#### 更多使用说明
+
+可参考[example](example)下的示例程序
 
 ## 架构说明
 
@@ -134,6 +142,7 @@ sudo systemctl restart hycan-daemon
 ## Todo
 
 - [ ] 更多示例和测试
+- [ ] Native Linux Can Filter
 - [ ] 封装常用功能的`Device`类
 - [ ] 封装常用功能的`Message`类
 
