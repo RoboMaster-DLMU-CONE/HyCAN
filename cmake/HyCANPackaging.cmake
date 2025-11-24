@@ -22,7 +22,7 @@ set(CPACK_GENERATOR "TGZ;DEB;RPM")
 set(CPACK_DEBIAN_PACKAGE_NAME "libhycan")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${CPACK_PACKAGE_CONTACT}")
 set(CPACK_DEBIAN_PACKAGE_SECTION "libs")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libnl-3-dev (>= 3.7.0-0.3) , libexpected-dev (>= 1.0.0)")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libnl-3-dev (>= 3.7.0), libnl-route-3-dev (>= 3.7.0), libexpected-dev (>= 1.0.0)")
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${PROJECT_SOURCE_DIR}/cmake/packaging/debian/postinst;${PROJECT_SOURCE_DIR}/cmake/packaging/debian/prerm")
 
 # RPM settings for executable package

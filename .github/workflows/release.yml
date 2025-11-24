@@ -1,0 +1,62 @@
+name: Release HyCAN
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: { }
+
+jobs:
+  package-HyCAN:
+    permissions:
+      contents: write
+    name: Build and Package HyCAN Library
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential dpkg-dev rpm pkg-config libnl-3-dev libnl-route-3-dev libexpected-dev 
+
+      - name: Setup CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Configure Project
+        run: |
+          cmake -B build -S . -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_HYCAN_PACKAGE=ON
+
+      - name: Build Project
+        run: |
+          cmake --build build
+
+      - name: Generate Packages
+        run: |
+          cd build
+          cpack -G TGZ
+          cpack -G DEB
+          cpack -G RPM
+
+      - name: List Generated Packages
+        run: |
+          ls -lh build/hycan-*
+
+      - name: Upload Packages as Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hycan-packages
+          path: build/hycan-*.*
+          retention-days: 90
+
+      - name: Upload to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            build/hycan-*.tar.gz
+            build/hycan-*.deb
+            build/hycan-*.rpm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
