@@ -66,6 +66,7 @@ namespace HyCAN
 
     NetlinkResponse NetlinkManager::check_interface_exists(const std::string_view interface_name) const
     {
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         // Refresh cache to get latest state
         if (nl_cache_refill(nl_socket_, link_cache_) < 0)
         {
@@ -85,6 +86,7 @@ namespace HyCAN
 
     NetlinkResponse NetlinkManager::check_interface_is_up(const std::string_view interface_name) const
     {
+        std::lock_guard lock(mutex_);
         // Refresh cache to get latest state
         if (nl_cache_refill(nl_socket_, link_cache_) < 0)
         {
@@ -106,6 +108,7 @@ namespace HyCAN
 
     NetlinkResponse NetlinkManager::set_interface_state_libnl(std::string_view interface_name, const bool up) const
     {
+        std::lock_guard lock(mutex_);
         // 刷新缓存以获取最新状态
         if (nl_cache_refill(nl_socket_, link_cache_) < 0)
         {
@@ -162,6 +165,7 @@ namespace HyCAN
 
     NetlinkResponse NetlinkManager::set_can_bitrate_libnl(std::string_view interface_name, const uint32_t bitrate) const
     {
+        std::lock_guard lock(mutex_);
         if (!interface_name.starts_with("can"))
         {
             return NetlinkResponse(0, "Not a CAN interface, skipping bitrate setting");
@@ -214,6 +218,7 @@ namespace HyCAN
 
     NetlinkResponse NetlinkManager::process_request(const NetlinkRequest& request) const
     {
+        std::lock_guard lock(mutex_);
         switch (request.operation)
         {
         case RequestType::INTERFACE_EXISTS:

@@ -2,6 +2,7 @@
 #define HYCAN_DAEMON_NETLINK_MANAGER_HPP
 
 #include <string_view>
+#include <mutex>
 
 struct nl_sock;
 struct nl_cache;
@@ -21,6 +22,7 @@ namespace HyCAN
     {
         nl_sock* nl_socket_{nullptr};
         nl_cache* link_cache_{nullptr};
+        mutable std::recursive_mutex mutex_;
 
         // Private netlink operation methods
         NetlinkResponse set_interface_state_libnl(std::string_view interface_name, bool up) const;
