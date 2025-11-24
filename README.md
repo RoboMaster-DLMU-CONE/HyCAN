@@ -1,67 +1,73 @@
-现代高性能 Linux C++ CAN通信协议库
+# HyCAN: A Modern High-Performance Linux C++ CAN Communication Framework
 
-## 亮点
+[English](README.md) | [中文](README_cn.md)
 
-- 基于`epoll`的高并发支持。每秒处理**100k消息**的场景下：
-    - **低CPU占用**：平均 `20%` CPU占用率（基于 AMD Ryzen 7 7840HS CPU
-      ），**无丢帧**
-    - **低延迟**：每条消息平均延迟低至**10us**
-    - [详见InterfaceStressTest](tests/InterfaceStressTest.cpp)
-- 用户友好的API
-- **无需root权限**：通过`HyCAN Daemon`系统服务，用户程序可以普通权限运行
-- **自动化接口管理**：库内通过守护进程直接开关`Netlink`上的`CAN/VCAN`接口
+A modern high-performance CAN communication protocol library for Linux, designed for scenarios with strict real-time
+requirements.
 
-## 使用场景
+## Highlights
 
-- 高实时性需求
-    - 控制算法依赖 CAN 总线上大量电机的实时反馈帧
-- 减少部署复杂度和提升安全性
-    - 避免每次运行程序前执行脚本手动启动 CAN/VCAN 接口
-    - 消除用户应用程序对root权限的依赖
-    - 通过守护进程集中管理CAN接口资源
+- High concurrency based on `epoll`. In scenarios with **100k messages per second**:
+    - **Low CPU usage**: average `20%` CPU usage (on AMD Ryzen 7 7840HS), **no frame loss**
+    - **Low latency**: average latency as low as **10 µs** per message
+    - See [InterfaceStressTest](tests/InterfaceStressTest.cpp) for details
+- User-friendly API
+- **No root privileges required**: with the `HyCAN Daemon` system service, user applications can run as normal users
+- **Automated interface management**: the daemon manages `CAN/VCAN` interfaces on `Netlink` directly inside the library
 
-## 接入工程
+## Use Cases
 
-### 前置依赖
+- High real-time requirements
+    - Control algorithms depending on vast motor feedback frames on the CAN bus
+    - Highly sensitive to message delays
+- Reduced deployment complexity and improved security
+    - Avoid running scripts to manually bring up CAN/VCAN interfaces before each run
+    - Remove the dependency on root privileges for user applications
+    - Centralized management of CAN interface resources through the daemon
+    - No need to introduce other heavyweight libraries
 
-- 构建工具
-    - CMake ( >= 3.20 )
-- 编译器
-    - GCC ( >= 13 ) 或 Clang ( >= 15 )
-- 系统环境
-    - Linux can 和 vcan 内核模块（通常通过 linux-modules-extra 包提供）
-    - 使用`modprobe`加载内核模块：
+## Integration into Your Project
 
-    ```shell
-    sudo modprobe vcan
-    sudo modprobe can
-    ```
+### Prerequisites
 
-### 使用包管理器安装
+- Build system
+    - CMake (>= 3.20)
+- Compilers
+    - GCC (>= 13) or Clang (>= 15)
+- System environment
+    - Linux `can` and `vcan` kernel modules (usually provided by the `linux-modules-extra` package)
+    - Load the kernel modules with `modprobe`:
 
-前往[release](https://github.com/RoboMaster-DLMU-CONE/HyCAN/releases)下载
+  ```shell
+  sudo modprobe vcan
+  sudo modprobe can
+  ```
 
-### （可选）从源代码构建
+### Install via Package Manager
 
-#### 安装依赖
+Download the prebuilt packages from the [releases](https://github.com/RoboMaster-DLMU-CONE/HyCAN/releases) page.
+
+### (Optional) Build from Source
+
+#### Install Dependencies
 
 ```shell
-# Debian系
+# Debian-based systems
 sudo apt install pkg-config cmake libnl-3-dev libnl-route-3-dev libexpected-dev
 ```
 
-#### CMake构建与安装
+#### CMake Configure & Install
 
 ```shell
 cmake -S . -B build
 cmake --build build
-# 安装到系统（包括HyCAN守护进程）
+# Install to the system (including the HyCAN daemon)
 sudo cmake --install build
 ```
 
-### 使用HyCAN
+### Using HyCAN in CMake
 
-HyCAN支持接入CMake工程。请参考下面的`CMakeLists.txt`示例代码：
+HyCAN is designed to be consumed from CMake projects. A minimal `CMakeLists.txt` example:
 
 ```cmake
 cmake_minimum_required(VERSION 3.20)
@@ -72,79 +78,83 @@ add_executable(MyConsumerApp main.cpp)
 target_link_libraries(MyConsumerApp PRIVATE HyCAN::HyCAN)
 ```
 
+Example `main.cpp`:
+
 ```c++
 #include <HyCAN/Interface/Interface.hpp>
 using HyCAN::CANInterface;
+
 int main() {
     constexpr can_frame test_frame = {
         .can_id = 0x100,
         .len = 8,
         .data = {0, 1, 2, 3, 4, 5, 6, 7},
     };
+
     CANInterface can_interface("can0");
-    
+
     can_interface.send(test_frame);
-    
+
     return 0;
 }
 ```
 
-#### 运行你的应用
+#### Run Your Application
 
-现在你的应用可以以**普通用户权限**运行：
+Your application can now run with **normal user privileges**:
 
 ```shell
-# 无需sudo！
+# No sudo required!
 ./MyConsumerApp
 ```
 
-确保HyCAN守护进程正在运行：
+Make sure the HyCAN daemon is running:
 
 ```shell
-# 如果守护进程未运行，启动它
+# Start the daemon if it is not running
 sudo systemctl start hycan-daemon
 ```
 
-#### 更多使用说明
+#### More Examples
 
-可参考[example](example)下的示例程序
+See the programs under the [example](example) directory.
 
-## 架构说明
+## Architecture Overview
 
-HyCAN采用守护进程架构：
+HyCAN uses a daemon-based architecture:
 
-- **HyCAN Daemon**: 作为systemd服务运行，以root权限管理CAN/VCAN接口
-- **用户应用**: 通过IPC与守护进程通信，无需root权限即可操作CAN接口
-- **安全隔离**: 只有守护进程需要特权，用户代码运行在受限环境中
+- **HyCAN Daemon**: runs as a `systemd` service with root privileges to manage CAN/VCAN interfaces
+- **User applications**: communicate with the daemon via IPC and can operate CAN interfaces without root privileges
+- **Security isolation**: only the daemon needs elevated privileges; user code runs in a restricted environment
 
-## 故障排除
+## Troubleshooting
 
-### 守护进程相关问题
+### Daemon-related Issues
 
 ```shell
-# 查看守护进程状态
+# Check daemon status
 sudo systemctl status hycan-daemon
 
-# 查看守护进程日志
+# View daemon logs
 sudo journalctl -u hycan-daemon -f
 
-# 重启守护进程
+# Restart the daemon
 sudo systemctl restart hycan-daemon
 ```
 
-### 权限问题
+### Permission Issues
 
-如果遇到权限相关错误，请确保：
+If you encounter permission-related errors, make sure:
 
-1. HyCAN守护进程已安装并运行
-2. 用户应用使用普通权限运行
+1. The HyCAN daemon is installed and running
+2. Your application is running as a normal user (no sudo required)
 
 ## Todo
 
-- [ ] 更多示例和测试
-- [ ] Native Linux Can Filter
-- [ ] 封装常用功能的`Device`类
-- [ ] 封装常用功能的`Message`类
+- [ ] More examples and tests
+- [ ] Native Linux CAN filter support
+- [ ] `Device` class wrapping common functionality
+- [ ] `Message` class wrapping common functionality
 
 ## Credit
 
