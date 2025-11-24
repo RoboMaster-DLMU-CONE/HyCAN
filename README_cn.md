@@ -150,7 +150,7 @@ sudo systemctl restart hycan-daemon
 
 - [ ] 更多示例和测试
 - [ ] Native Linux CAN Filter
-- [ ] 封装常用功能的 `Device` 类
+- [ ] Doxygen 文档
 - [ ] 封装常用功能的 `Message` 类
 
 ## Credit

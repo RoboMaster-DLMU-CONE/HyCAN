@@ -153,7 +153,7 @@ If you encounter permission-related errors, make sure:
 
 - [ ] More examples and tests
 - [ ] Native Linux CAN filter support
-- [ ] `Device` class wrapping common functionality
+- [ ] Doxygen docs
 - [ ] `Message` class wrapping common functionality
 
 ## Credit
