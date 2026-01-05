@@ -36,7 +36,7 @@ int main() {
     std::cout << "Press Ctrl+C to exit." << std::endl << std::endl;
 
     // 1. Define a callback function to print received frames
-    const std::function callback = [](can_frame &&frame) {
+    const std::function callback = [](can_frame frame) {
         std::cout << "Received CAN Frame -> ID: 0x" << std::hex << frame.can_id
                   << ", DLC: " << std::dec << static_cast<int>(frame.len)
                   << ", Data: ";

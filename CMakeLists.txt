@@ -13,10 +13,11 @@ option(BUILD_HYCAN_TEST "Build HyCAN Tests" OFF)
 option(BUILD_HYCAN_PACKAGE "Build HyCAN Packages" OFF)
 option(TEST_HYCAN_LATENCY "Adding Latency statistics for testing" OFF)
 
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+
 include(FetchContent)
 include(HyCANFindLibnl3)
 include(HyCANFindTlExpected)
-include(HyCANFindNontypeFunctional)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
