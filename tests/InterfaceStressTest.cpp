@@ -63,7 +63,7 @@ void sender_worker_fn(const int thread_id, const canid_t base_can_id) {
     std::array<std::string, NUM_INTERFACES> names;
     for (int i = 0; i < NUM_INTERFACES; i++) {
         names[i] = std::format("vcan_stress_{}", i);
-        senders[i] = std::make_unique<HyCAN::Sender>(HyCAN::Sender(names[i]));
+        senders[i] = std::make_unique<HyCAN::Sender>(names[i]);
     }
     uint64_t messages_sent_by_this_thread = 0;
     int interface_rr_index = thread_id % NUM_INTERFACES;

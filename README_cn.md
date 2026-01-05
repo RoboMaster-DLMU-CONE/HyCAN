@@ -4,8 +4,8 @@
 
 ## 亮点
 
-- 基于 `epoll` 的高并发支持。在每秒处理 **100k 消息** 的场景下：
-    - **低 CPU 占用**：平均 `20%` CPU 占用率（基于 AMD Ryzen 7 7840HS CPU），**无丢帧**
+- 基于 `epoll` 的高并发支持。在每秒处理 **100k 消息**（发送+接收回调） 的场景下：
+    - **低 CPU 占用**：平均 `8%` CPU 占用率（基于 AMD Ryzen 7 7840HS CPU），**无丢帧**
     - **低延迟**：每条消息平均延迟低至 **10µs**
     - 详见 [InterfaceStressTest](tests/InterfaceStressTest.cpp)
 - 用户友好的 API

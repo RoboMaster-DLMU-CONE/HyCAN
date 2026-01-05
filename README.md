@@ -7,8 +7,8 @@ requirements.
 
 ## Highlights
 
-- High concurrency based on `epoll`. In scenarios with **100k messages per second**:
-    - **Low CPU usage**: average `20%` CPU usage (on AMD Ryzen 7 7840HS), **no frame loss**
+- High concurrency based on `epoll`. In scenarios with **100k messages per second** (Send + Receive):
+    - **Low CPU usage**: average `8%` CPU usage (on AMD Ryzen 7 7840HS), **no frame loss**
     - **Low latency**: average latency as low as **10 µs** per message
     - See [InterfaceStressTest](tests/InterfaceStressTest.cpp) for details
 - User-friendly API

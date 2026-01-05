@@ -3,110 +3,82 @@
 #include <cstring>
 #include <fcntl.h>
 #include <format>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
 #include <linux/can.h>
 #include <net/if.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 using tl::unexpected, std::format, std::string_view;
 
-namespace HyCAN
-{
-    Socket::Socket(const string_view interface_name) : interface_name(interface_name)
-    {
+namespace HyCAN {
+Socket::Socket(const string_view interface_name)
+    : interface_name(interface_name) {};
+
+Socket::~Socket() { close(sock_fd); }
+
+tl::expected<void, Error> Socket::ensure_connected() noexcept {
+    if (sock_fd > 0) {
+        close(sock_fd);
+        sock_fd = -1;
+    }
+    sock_fd = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+    if (sock_fd == -1) {
+        return unexpected(
+            Error{ErrorCode::CANSocketCreateError,
+                  format("Failed to create CAN socket: {}", strerror(errno))});
+    }
+    ifreq ifr{};
+    const auto name_len =
+        std::min(interface_name.size(), static_cast<size_t>(IFNAMSIZ - 1));
+    std::memcpy(ifr.ifr_name, interface_name.data(), name_len);
+    ifr.ifr_name[name_len] = '\0';
+    if (ioctl(sock_fd, SIOCGIFINDEX, &ifr) == -1) {
+        close(sock_fd);
+        sock_fd = -1;
+        return unexpected(
+            Error{ErrorCode::CANInterfaceIndexError,
+                  format("Failed to get CAN interface '{}' index: {}",
+                         ifr.ifr_ifrn.ifrn_name, strerror(errno))});
+    }
+
+    sockaddr_can addr = {
+        .can_family = AF_CAN,
+        .can_ifindex = ifr.ifr_ifindex,
     };
 
-    Socket::~Socket()
-    {
+    if (bind(sock_fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) ==
+        -1) {
         close(sock_fd);
+        sock_fd = -1;
+        return unexpected(
+            Error{ErrorCode::CANSocketBindError,
+                  format("Failed to bind CAN socket: {}", strerror(errno))});
     }
 
-    tl::expected<void, Error> Socket::ensure_connected() noexcept
-    {
-        if (sock_fd > 0)
-        {
-            close(sock_fd);
-            sock_fd = -1;
-        }
-        sock_fd = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-        if (sock_fd == -1)
-        {
-            return unexpected(Error{
-                ErrorCode::CANSocketCreateError, format("Failed to create CAN socket: {}", strerror(errno))
-            });
-        }
-        ifreq ifr{};
-        const auto name_len = std::min(interface_name.size(), static_cast<size_t>(IFNAMSIZ - 1));
-        std::memcpy(ifr.ifr_name, interface_name.data(), name_len);
-        ifr.ifr_name[name_len] = '\0';
-        if (ioctl(sock_fd, SIOCGIFINDEX, &ifr) == -1)
-        {
-            close(sock_fd);
-            sock_fd = -1;
-            return unexpected(Error{
-                ErrorCode::CANInterfaceIndexError,
-                format("Failed to get CAN interface '{}' index: {}", ifr.ifr_ifrn.ifrn_name, strerror(errno))
-            });
-        }
-
-        sockaddr_can addr = {
-            .can_family = AF_CAN,
-            .can_ifindex = ifr.ifr_ifindex,
-        };
-
-        if (bind(sock_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == -1)
-        {
-            close(sock_fd);
-            sock_fd = -1;
-            return unexpected(Error{
-                ErrorCode::CANSocketBindError, format("Failed to bind CAN socket: {}", strerror(errno))
-            });
-        }
-
-        const int flags = fcntl(sock_fd, F_GETFL, 0);
-        fcntl(sock_fd, F_SETFL, flags | O_NONBLOCK);
-        return {};
-    }
-
-    tl::expected<void, Error> Socket::validate_connection() noexcept
-    {
-        if (sock_fd <= 0)
-        {
-            return ensure_connected();
-        }
-        int error = 0;
-        socklen_t len = sizeof(error);
-        if (getsockopt(sock_fd, SOL_SOCKET, SO_ERROR, &error, &len) == -1 || error != 0)
-        {
-            return ensure_connected();
-        }
-        return {};
-    }
-
-    tl::expected<void, Error> Socket::flush() const noexcept
-    {
-        if (sock_fd < 0)
-        {
-            return unexpected(Error{ErrorCode::CANInvalidSocketError, "Cannot flush with invalid socket descriptor"});
-        }
-        can_frame frame{};
-        while (true)
-        {
-            if (const ssize_t nbytes = read(sock_fd, &frame, sizeof(can_frame)); nbytes > 0)
-            {
-            }
-            else if (nbytes == -1 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == ENETDOWN))
-            {
-                break;
-            }
-            else
-            {
-                return unexpected(Error{
-                    ErrorCode::CANFlushError, format("Failed to flush linux buffer: {}", strerror(errno))
-                });
-            }
-        }
-        return {};
-    }
+    const int flags = fcntl(sock_fd, F_GETFL, 0);
+    fcntl(sock_fd, F_SETFL, flags | O_NONBLOCK);
+    return {};
 }
+
+tl::expected<void, Error> Socket::flush() const noexcept {
+    if (sock_fd < 0) {
+        return unexpected(Error{ErrorCode::CANInvalidSocketError,
+                                "Cannot flush with invalid socket descriptor"});
+    }
+    can_frame frame{};
+    while (true) {
+        if (const ssize_t nbytes = read(sock_fd, &frame, sizeof(can_frame));
+            nbytes > 0) {
+        } else if (nbytes == -1 && (errno == EAGAIN || errno == EWOULDBLOCK ||
+                                    errno == ENETDOWN)) {
+            break;
+        } else {
+            return unexpected(Error{
+                ErrorCode::CANFlushError,
+                format("Failed to flush linux buffer: {}", strerror(errno))});
+        }
+    }
+    return {};
+}
+} // namespace HyCAN
