@@ -2,3 +2,6 @@ cmake-build*
 CMakeUserPresets.json
 .idea
 build
+out
+compile_commands.json
+.cache
