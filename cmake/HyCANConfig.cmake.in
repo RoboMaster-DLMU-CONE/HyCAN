@@ -1,8 +1,5 @@
 @PACKAGE_INIT@
 
-set(CMAKE_CXX_STANDARD @PROJECT_CXX_STANDARD@)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 include(CMakeFindDependencyMacro)
 
 if(NOT TARGET tl::expected)

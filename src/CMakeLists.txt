@@ -11,6 +11,8 @@ if (NOT TARGET HyCAN::HyCAN)
     add_library(HyCAN::HyCAN ALIAS HyCAN)
 endif ()
 
+target_compile_features(HyCAN PUBLIC cxx_std_20)
+
 target_include_directories(HyCAN
         PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
