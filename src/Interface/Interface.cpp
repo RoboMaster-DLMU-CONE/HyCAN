@@ -6,9 +6,11 @@ using std::string, tl::unexpected;
 namespace HyCAN
 {
     template <InterfaceType Type>
-    Interface<Type>::Interface(const string& interface_name) : interface_name(string(interface_name)),
-                                                               dispatcher(this->interface_name),
-                                                               sender(this->interface_name)
+    Interface<Type>::Interface(const string& interface_name,
+                               const std::optional<uint8_t>& cpu_core_opt)
+                                     : interface_name(string(interface_name)),
+                                       dispatcher(this->interface_name, cpu_core_opt),
+                                       sender(this->interface_name)
     {
     }
 

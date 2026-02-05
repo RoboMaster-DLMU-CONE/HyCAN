@@ -53,7 +53,8 @@ inline tl::expected<void, Error> affinize_cpu(const uint8_t cpu) {
 inline bool has_root_privileges() noexcept { return geteuid() == 0; }
 
 namespace HyCAN {
-Dispatcher::Dispatcher(const std::string_view interface_name)
+Dispatcher::Dispatcher(const std::string_view interface_name,
+                       const std::optional<uint8_t>& cpu_core_opt)
     : socket(interface_name), interface_name(interface_name) {
     epoll_fd = epoll_create(256);
     if (epoll_fd == -1) {
@@ -70,8 +71,7 @@ Dispatcher::Dispatcher(const std::string_view interface_name)
         throw std::runtime_error(e.message);
     });
 
-    cpu_core =
-        thread_counter.fetch_add(1, std::memory_order_acquire) % get_nprocs();
+    cpu_core = cpu_core_opt.has_value() ? cpu_core_opt.value() : thread_counter.fetch_add(1, std::memory_order_acquire) % get_nprocs();
 }
 
 Dispatcher::~Dispatcher() {

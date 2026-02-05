@@ -13,7 +13,7 @@ enum class InterfaceType { CAN, VCAN };
 
 template <InterfaceType Type = InterfaceType::CAN> class Interface {
   public:
-    explicit Interface(const std::string &interface_name);
+    explicit Interface(const std::string &interface_name, const std::optional<uint8_t>& cpu_core_opt = std::nullopt);
     Interface() = delete;
     tl::expected<void, Error> up(uint32_t bitrate = 1000000);
     tl::expected<void, Error> down();

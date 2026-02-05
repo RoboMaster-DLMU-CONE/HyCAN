@@ -13,6 +13,8 @@
 #include <linux/can.h>
 #include <type_traits>
 
+#include <optional>
+
 #include "CanFrameConvertible.hpp"
 #include "HyCAN/Util/SpinLock.hpp"
 #include "Socket.hpp"
@@ -22,7 +24,7 @@ static constexpr size_t MAX_EPOLL_EVENT = 2048;
 namespace HyCAN {
 class Dispatcher {
   public:
-    explicit Dispatcher(std::string_view interface_name);
+    explicit Dispatcher(std::string_view interface_name, const std::optional<uint8_t>& cpu_core_opt = std::nullopt);
     Dispatcher() = delete;
     Dispatcher(const Dispatcher &other) = delete;
     Dispatcher(Dispatcher &&other) = delete;
