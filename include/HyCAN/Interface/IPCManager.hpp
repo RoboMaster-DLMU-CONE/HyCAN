@@ -6,6 +6,8 @@
 
 #include <tl/expected.hpp>
 
+#include <cstdint>
+
 #include "HyCAN/Util/Error.hpp"
 
 namespace HyCAN

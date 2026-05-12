@@ -6,6 +6,7 @@
 #include <memory>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <cstdint>
 
 namespace HyCAN
 {

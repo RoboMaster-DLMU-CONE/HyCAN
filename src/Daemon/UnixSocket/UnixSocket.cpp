@@ -5,6 +5,8 @@
 #include <cstring>
 #include <errno.h>
 #include <sys/stat.h>
+#include <cstdint>
+#include <unistd.h>
 
 namespace HyCAN
 {
