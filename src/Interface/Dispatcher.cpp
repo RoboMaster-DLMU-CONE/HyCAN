@@ -90,7 +90,9 @@ tl::expected<void, Error> Dispatcher::start() noexcept {
         .and_then([&] { return socket.flush(); })
         .and_then([&] {
             if (!reap_thread.joinable()) {
-                reap_thread = jthread(&Dispatcher::reap_process, this);
+                reap_thread = jthread([this](std::stop_token token) {
+                    this->reap_process(token);
+                });
             }
             return tl::expected<void, Error>{};
         });
